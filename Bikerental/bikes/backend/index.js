@@ -34,11 +34,35 @@ connectDB();
 initCronJobs();
 
 /* =====================================
-   ✅ TEMPORARY CORS (Allow all for now)
-   We will secure this after frontend deploy
+   ✅ CORS CONFIGURATION
 ===================================== */
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://bikes-ashy.vercel.app',
+  /\.vercel\.app$/ // Allow all Vercel previews
+];
+
 app.use(cors({
-  origin: '*'
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed instanceof RegExp) return allowed.test(origin);
+      return allowed === origin;
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: false, // Set to false since we use Bearer tokens
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 /* =====================================

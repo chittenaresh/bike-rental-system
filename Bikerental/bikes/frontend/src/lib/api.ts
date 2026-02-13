@@ -55,7 +55,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await fetch(url, { 
       ...init, 
       headers: { ...headers, ...(init?.headers as any) },
-      credentials: 'include', // Include cookies for CORS
+      // Removed credentials: 'include' to avoid CORS issues with wildcard origins
     });
     
     if (!res.ok) {
@@ -197,7 +197,7 @@ export const documentsAPI = {
         method: 'POST',
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
         body: fd,
-        credentials: 'include',
+        // Removed credentials: 'include' to avoid CORS issues
       });
       
       if (!res.ok) {
