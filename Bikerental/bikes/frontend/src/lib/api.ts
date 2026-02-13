@@ -2,6 +2,9 @@ import { handleApiError, isAuthError, logError } from './errorHandler';
 
 // Get API base URL - use environment variable in production, fallback to proxy in development
 const getApiBase = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
   if (import.meta.env.VITE_API_BASE) {
     return import.meta.env.VITE_API_BASE;
   }

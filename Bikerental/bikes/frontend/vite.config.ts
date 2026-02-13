@@ -52,31 +52,10 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       // Production optimizations
-      target: 'esnext',
+      target: 'es2020',
       minify: 'esbuild',
       cssMinify: true,
       sourcemap: !isProduction,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-                return 'vendor-react';
-              }
-              if (id.includes('@radix-ui')) {
-                return 'vendor-radix';
-              }
-              if (id.includes('lucide-react')) {
-                return 'vendor-icons';
-              }
-              if (id.includes('recharts')) {
-                return 'vendor-charts';
-              }
-              return 'vendor-others';
-            }
-          },
-        },
-      },
       // Increase chunk size warning limit
       chunkSizeWarningLimit: 1000,
       reportCompressedSize: false, // Speed up build
