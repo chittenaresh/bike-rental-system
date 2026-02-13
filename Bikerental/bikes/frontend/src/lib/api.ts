@@ -1,18 +1,21 @@
 import { handleApiError, isAuthError, logError } from './errorHandler';
 
-// Get API base URL - use environment variable in production, fallback to proxy in development
+// Get API base URL - prioritize relative path in production for Vercel rewrites to avoid CORS
 const getApiBase = () => {
+  // In production, we strongly prefer the relative /api path to use Vercel's proxy.
+  // This avoids all CORS issues and mixed content problems.
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  
+  // In development or if explicitly overridden, use the env var
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   if (import.meta.env.VITE_API_BASE) {
     return import.meta.env.VITE_API_BASE;
   }
-  // In development, use proxy. In production, use relative path or env var
-  if (import.meta.env.PROD) {
-    return '/api'; // Use relative path in production
-  }
-  return '/api'; // Use proxy in development
+  return '/api';
 };
 
 const API_BASE = getApiBase();
@@ -52,6 +55,9 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   
   try {
     const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+    if (import.meta.env.DEV) {
+      console.log(`fetching: ${url}`);
+    }
     const res = await fetch(url, { 
       ...init, 
       headers: { ...headers, ...(init?.headers as any) },
