@@ -1,4 +1,5 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import { authenticateToken } from './auth.js';
 import SupportTicket from '../models/SupportTicket.js';
 import User from '../models/User.js';
@@ -73,10 +74,16 @@ router.get('/', authenticateToken, async (req, res) => {
       })
       .sort({ updatedAt: -1 });
 
-    // For admins, filter tickets by bike location (admin's assigned location)
+    // For admins, filter tickets by location
     if (user.role === 'admin' && user.locationId) {
       const adminLocationId = user.locationId.toString();
       tickets = tickets.filter((ticket) => {
+        // First check ticket.locationId
+        if (ticket.locationId && ticket.locationId.toString() === adminLocationId) {
+          return true;
+        }
+
+        // Then check rental's bike location
         const rental = ticket.rentalId;
         if (!rental || !rental.bikeId) return false;
         const bike = rental.bikeId;
@@ -97,30 +104,66 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Create a new ticket
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const { subject, category, description, rentalId, images } = req.body;
-    const user = await User.findById(req.user.userId);
+    const { subject, category, description, rentalId, images, locationId, guestName, guestEmail } = req.body;
+    
+    // Check for auth token manually to handle both guest and logged-in users
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    
+    let userId = null;
+    let userRole = 'guest';
 
-    const ticket = new SupportTicket({
-      userId: req.user.userId,
-      rentalId,
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.userId;
+        const user = await User.findById(userId);
+        if (user) {
+          userRole = user.role;
+        } else {
+          userId = null; // User from token not found
+        }
+      } catch (e) {
+        console.warn('Invalid token provided for ticket creation, proceeding as guest:', e.message);
+        userId = null; // Token invalid
+      }
+    }
+
+    const ticketData = {
+      userId: userId || undefined,
+      rentalId: rentalId || undefined,
+      locationId: locationId || undefined,
+      guestName: userId ? undefined : guestName,
+      guestEmail: userId ? undefined : guestEmail,
       subject,
       category,
       priority: ['breakdown', 'accident'].includes(category) ? 'critical' : 'medium',
       messages: [{
-        senderId: req.user.userId,
-        senderRole: user.role,
+        senderId: userId || undefined,
+        guestName: userId ? undefined : guestName,
+        guestEmail: userId ? undefined : guestEmail,
+        senderRole: userRole,
         content: description,
         attachments: images || []
       }]
-    });
+    };
 
+    const ticket = new SupportTicket(ticketData);
     await ticket.save();
     res.status(201).json(ticket);
   } catch (error) {
-    console.error('Create ticket error:', error);
-    res.status(500).json({ message: 'Error creating ticket' });
+    console.error('Create ticket error details:', {
+      message: error.message,
+      stack: error.stack,
+      body: req.body
+    });
+    res.status(500).json({ 
+      message: 'Error creating ticket',
+      details: error.message 
+    });
   }
 });
 

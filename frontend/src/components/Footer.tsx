@@ -1,8 +1,27 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bike, Mail, Phone, MapPin } from 'lucide-react';
+import { locationsAPI } from '@/lib/api';
+import { Location } from '@/types';
+import { safeAsync } from '@/lib/errorHandler';
 
 export const Footer = memo(function Footer() {
+  const [locationName, setLocationName] = useState<string>('');
+
+  useEffect(() => {
+    const loadLocation = async () => {
+      const selectedId = localStorage.getItem('selectedLocation');
+      if (selectedId) {
+        const locations = await safeAsync(() => locationsAPI.getAll(), [], 'footerLoadLocations');
+        const loc = locations.find((l: Location) => l.id === selectedId);
+        if (loc) {
+          setLocationName(loc.city || loc.name || '');
+        }
+      }
+    };
+    loadLocation();
+  }, []);
+
   return (
     <footer className="bg-secondary text-secondary-foreground">
       <div className="container mx-auto px-4 py-12">
@@ -48,7 +67,7 @@ export const Footer = memo(function Footer() {
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-primary" />
-                  hello@rideflow.com
+                  {locationName ? `${locationName.toLowerCase().replace(/\s+/g, '')}@bikerental.com` : 'hello@rideflow.com'}
                 </li>
                 <li className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-primary" />
@@ -56,7 +75,7 @@ export const Footer = memo(function Footer() {
                 </li>
                 <li className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary" />
-                  123 Bike Street, Tech Park, Bangalore
+                  {locationName || 'Main Garage, Bangalore'}
                 </li>
               </ul>
             </div>

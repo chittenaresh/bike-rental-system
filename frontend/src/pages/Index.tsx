@@ -180,10 +180,10 @@ export default function Index() {
           "openingHours": "Mo-Fr 07:00-21:00, Sa 08:00-20:00, Su 09:00-18:00",
           "address": {
             "@type": "PostalAddress",
-            "streetAddress": "123 Bike Street, Tech Park",
-            "addressLocality": "Bangalore",
-            "addressRegion": "Karnataka",
-            "postalCode": "560100",
+            "streetAddress": locationName || "Our Office",
+            "addressLocality": locationName || "India",
+            "addressRegion": "Telangana",
+            "postalCode": "500001",
             "addressCountry": "IN"
           },
           "geo": {

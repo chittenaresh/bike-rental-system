@@ -53,14 +53,18 @@ interface Ticket {
   priority: string;
   createdAt: string;
   updatedAt: string;
-  userId: { _id: string; name: string; email: string; mobile: string };
+  userId?: { _id: string; name: string; email: string; mobile: string };
+  guestName?: string;
+  guestEmail?: string;
   rentalId?: any;
   messages: Message[];
 }
 
 interface Message {
   _id: string;
-  senderId: { _id: string; name: string; role: string } | string;
+  senderId?: { _id: string; name: string; role: string } | string;
+  guestName?: string;
+  guestEmail?: string;
   senderRole: string;
   content: string;
   attachments: string[];
@@ -121,11 +125,14 @@ export function SupportManager() {
   };
 
   const filteredTickets = tickets.filter(ticket => {
+    const userName = ticket.userId?.name || ticket.guestName || '';
+    const userEmail = ticket.userId?.email || ticket.guestEmail || '';
+
     const matchesSearch = 
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.userId?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.userId?.email.toLowerCase().includes(searchQuery.toLowerCase());
+      userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      userEmail.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
     
@@ -227,8 +234,8 @@ export function SupportManager() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span>{ticket.userId?.name || 'Unknown'}</span>
-                      <span className="text-xs text-muted-foreground">{ticket.userId?.email}</span>
+                      <span>{ticket.userId?.name || ticket.guestName || 'Guest'}</span>
+                      <span className="text-xs text-muted-foreground">{ticket.userId?.email || ticket.guestEmail}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -418,10 +425,16 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
             <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t">
               <div className="flex items-center gap-1">
                 <div className="h-2 w-2 rounded-full bg-primary" />
-                <span>{currentTicket.userId?.name}</span>
+                <span>{currentTicket.userId?.name || currentTicket.guestName || 'Guest'}</span>
               </div>
               <div>•</div>
-              <div>{currentTicket.userId?.mobile}</div>
+              <div>{currentTicket.userId?.email || currentTicket.guestEmail}</div>
+              {currentTicket.userId?.mobile && (
+                <>
+                  <div>•</div>
+                  <div>{currentTicket.userId.mobile}</div>
+                </>
+              )}
               <div>•</div>
               <div className="capitalize">{currentTicket.category}</div>
             </div>
@@ -467,7 +480,7 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
                     <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
                       isAdmin ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'
                     }`}>
-                      {isAdmin ? 'A' : (typeof msg.senderId === 'object' ? msg.senderId.name[0] : 'U')}
+                      {isAdmin ? 'A' : (msg.guestName ? msg.guestName[0] : (typeof msg.senderId === 'object' ? msg.senderId.name[0] : 'U'))}
                     </div>
                     <div className={`rounded-2xl p-4 shadow-sm ${
                       isAdmin 

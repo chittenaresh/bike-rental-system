@@ -4,11 +4,13 @@ const messageSchema = new mongoose.Schema({
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false // Optional for guest contact
   },
+  guestName: String,
+  guestEmail: String,
   senderRole: {
     type: String,
-    enum: ['user', 'admin', 'superadmin'],
+    enum: ['user', 'admin', 'superadmin', 'guest'],
     required: true
   },
   content: {
@@ -28,8 +30,15 @@ const supportTicketSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false // Optional for guest contact
   },
+  locationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Location',
+    required: false
+  },
+  guestName: String,
+  guestEmail: String,
   rentalId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Rental'
@@ -40,7 +49,7 @@ const supportTicketSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['breakdown', 'accident', 'damage', 'other'],
+    enum: ['breakdown', 'accident', 'damage', 'other', 'contact'],
     default: 'other'
   },
   status: {

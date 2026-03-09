@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supportAPI, rentalsAPI } from '@/lib/api';
+import { supportAPI, rentalsAPI, bikesAPI } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { SEO } from '@/components/SEO';
@@ -249,6 +249,7 @@ function TicketCard({ ticket, onClick }: { ticket: Ticket; onClick: () => void }
 function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (open: boolean) => void; onSuccess: () => void }) {
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('other');
+  const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
@@ -265,8 +266,29 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
   const loadRentals = async () => {
     try {
       const data = await rentalsAPI.getUserRentals();
+      // Filter for active or recently completed rentals (e.g., within the last 7 days)
+      const relevantRentals = data.filter(rental => {
+        const isOngoing = rental.status === 'ongoing' || rental.status === 'active';
+        const isRecent = rental.dropoffTime && new Date(rental.dropoffTime).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000;
+        return isOngoing || isRecent;
+      });
+
+      // Fetch bike details for each relevant rental
+      const rentalsWithBikeDetails = await Promise.all(relevantRentals.map(async rental => {
+        if (rental.bikeId && typeof rental.bikeId === 'string') {
+          try {
+            const bikeDetails = await bikesAPI.getById(rental.bikeId);
+            return { ...rental, bikeId: bikeDetails };
+          } catch (bikeError) {
+            console.error(`Failed to load bike details for ${rental.bikeId}:`, bikeError);
+            return { ...rental, bikeId: { name: 'Unknown Bike' } }; // Fallback
+          }
+        }
+        return rental;
+      }));
+
       // Sort by date descending
-      const sorted = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const sorted = rentalsWithBikeDetails.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRentals(sorted);
     } catch (error) {
       console.error('Failed to load rentals', error);
@@ -275,7 +297,19 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject || !description) return;
+    if (subject.length < 5 || subject.length > 100) {
+      toast({ title: 'Validation Error', description: 'Subject must be between 5 and 100 characters', variant: 'destructive' });
+      return;
+    }
+    if (description.length < 20 || description.length > 500) {
+      toast({ title: 'Validation Error', description: 'Description must be between 20 and 500 characters', variant: 'destructive' });
+      return;
+    }
+
+    if (category === 'other' && (!customCategory || customCategory.length < 3)) {
+      toast({ title: 'Validation Error', description: 'Please provide a custom category name (min 3 characters)', variant: 'destructive' });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -288,7 +322,7 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
 
       await supportAPI.create({
         subject,
-        category,
+        category: category === 'other' ? customCategory : category,
         description,
         rentalId: selectedRentalId === 'none' ? undefined : selectedRentalId,
         images: imageUrls
@@ -297,6 +331,7 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
       toast({ title: 'Success', description: 'Ticket created successfully' });
       setSubject('');
       setCategory('other');
+      setCustomCategory('');
       setDescription('');
       setSelectedRentalId('none');
       setFiles([]);
@@ -325,12 +360,19 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Subject</label>
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium">Subject</label>
+              <span className={`text-[10px] ${subject.length < 5 || subject.length > 100 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {subject.length}/100 (min 5)
+              </span>
+            </div>
             <Input 
               value={subject} 
               onChange={(e) => setSubject(e.target.value)} 
               placeholder="Brief summary of the issue" 
               required 
+              minLength={5}
+              maxLength={100}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -359,11 +401,15 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
                   <SelectItem value="none">None</SelectItem>
                   {rentals.map(rental => {
                     let dateStr = '';
+                    let bikeName = 'Unknown Bike';
+                    if (rental.bikeId && typeof rental.bikeId !== 'string') {
+                      bikeName = rental.bikeId.name || 'Unknown Bike';
+                    }
                     try {
                       if (rental.startDate) {
                         const d = new Date(rental.startDate);
                         if (!isNaN(d.getTime())) {
-                          dateStr = ` (${format(d, 'MMM d')})`;
+                          dateStr = ` (${format(d, 'MMM d, yy')})`;
                         }
                       }
                     } catch (e) {
@@ -372,7 +418,7 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
                     
                     return (
                       <SelectItem key={rental._id} value={rental._id}>
-                        {rental.bikeId?.name || 'Unknown Bike'}{dateStr}
+                        {bikeName}{dateStr}
                       </SelectItem>
                     );
                   })}
@@ -380,14 +426,34 @@ function CreateTicketDialog({ open, onOpenChange, onSuccess }: { open: boolean; 
               </Select>
             </div>
           </div>
+          {category === 'other' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Custom Category Name</label>
+              <Input 
+                value={customCategory} 
+                onChange={(e) => setCustomCategory(e.target.value)} 
+                placeholder="e.g., Refund, Extension, Account Issue" 
+                required 
+                minLength={3}
+                maxLength={50}
+              />
+            </div>
+          )}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium">Description</label>
+              <span className={`text-[10px] ${description.length < 20 || description.length > 500 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {description.length}/500 (min 20)
+              </span>
+            </div>
             <Textarea 
               value={description} 
               onChange={(e) => setDescription(e.target.value)} 
               placeholder="Detailed description..." 
               className="min-h-[100px]"
               required 
+              minLength={20}
+              maxLength={500}
             />
           </div>
           <div className="space-y-2">

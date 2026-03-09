@@ -44,71 +44,44 @@ function handleAuthError() {
   }
 }
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  // Ensure we have the latest token from storage if we don't have one in memory
-  if (!authToken && typeof window !== 'undefined') {
-    authToken = localStorage.getItem('authToken');
+async function apiRequest<T>(path: string, init: RequestInit = {}, isPublic = false): Promise<T> {
+  const token = localStorage.getItem('authToken');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...init.headers,
+  } as Record<string, string>;
+
+  if (token && !isPublic) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  
-  try {
-    const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
-    if (import.meta.env.DEV) {
-      console.log(`fetching: ${url}`);
-    }
-    const res = await fetch(url, { 
-      ...init, 
-      headers: { ...headers, ...(init?.headers as any) },
-      // Removed credentials: 'include' to avoid CORS issues with wildcard origins
-    });
-    
-    if (!res.ok) {
-      // Handle auth errors silently
-      if (res.status === 401 || res.status === 403) {
-        handleAuthError();
-        const error = new Error(`Authentication failed: ${res.status}`);
-        (error as any).status = res.status;
-        throw error;
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const response = await fetch(url, {
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 && !isPublic) {
+      // Don't clear token for guest failures, only for authenticated user failures
+      if (token) {
+        setAuthToken(null);
+        localStorage.removeItem('currentUser');
+        // window.location.href = '/login'; // Original code avoids automatic redirect
       }
-      
-      let msg = '';
-      try {
-        msg = await res.text();
-        // Try to parse as JSON for better error messages
-        try {
-          const json = JSON.parse(msg);
-          msg = json.message || json.error || msg;
-        } catch {
-          // Not JSON, use as is
-        }
-      } catch {
-        msg = `Request failed with status ${res.status}`;
-      }
-      
-      const error = new Error(msg || `Request failed ${res.status}`);
-      (error as any).status = res.status;
+      const error = new Error(`Authentication failed: ${response.status}`);
+      (error as any).status = response.status;
       throw error;
     }
-    
-    const ct = res.headers.get('content-type') || '';
-    if (ct.includes('application/json')) {
-      try {
-        return await res.json();
-      } catch (e) {
-        logError(e, 'apiRequest.json');
-        throw new Error('Invalid JSON response');
-      }
-    }
-    return (await res.text()) as unknown as T;
-  } catch (error) {
-    // Re-throw auth errors as-is (they're handled silently)
-    if (isAuthError(error)) {
-      throw error;
-    }
-    throw handleApiError(error);
+    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(errorData.message || `Request failed with status ${response.status}`);
   }
+
+  if (response.headers.get('Content-Length') === '0' || response.status === 204) {
+    return null as T;
+  }
+
+  return response.json();
 }
 
 export const authAPI = {
@@ -276,7 +249,7 @@ export const heroImagesAPI = {
 export const supportAPI = {
   getAll: () => apiRequest<any[]>('/support'),
   getById: (id: string) => apiRequest<any>(`/support/${id}`),
-  create: (data: any) => apiRequest<any>('/support', { method: 'POST', body: JSON.stringify(data) }),
+  create: (data: any) => apiRequest<any>('/support', { method: 'POST', body: JSON.stringify(data) }, true),
   addMessage: (id: string, data: { content: string; attachments?: string[] }) => 
     apiRequest<any>(`/support/${id}/messages`, { method: 'POST', body: JSON.stringify(data) }),
   updateStatus: (id: string, data: { status?: string; priority?: string }) => 

@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Bike, User, Menu, X, LogOut, MapPin, Activity, Moon, Sun } from 'lucide-react';
-import { getCurrentUser, authAPI, locationsAPI, rentalsAPI } from '@/lib/api';
+import { getCurrentUser, authAPI, locationsAPI, rentalsAPI, usersAPI } from '@/lib/api';
 import { Location } from '@/types';
 import { safeAsync, isAuthError } from '@/lib/errorHandler';
 import { useTheme } from 'next-themes';
@@ -126,14 +126,14 @@ export const Navbar = memo(function Navbar() {
       }
     }
 
-    let profile = null;
-    if (getCurrentUser()) {
-      profile = await safeAsync(() => authAPI.getCurrentUser(), null, 'loadUser');
-    }
-    const userLocId = profile?.currentLocationId ? String(profile.currentLocationId) : '';
-    if (userLocId && ids.has(userLocId)) {
-      nextLocationId = userLocId;
-      localStorage.setItem('selectedLocation', userLocId);
+    // Only check profile if we don't have a valid location from localStorage
+    if (!nextLocationId && getCurrentUser()) {
+      const profile = await safeAsync(() => authAPI.getCurrentUser(), null, 'loadUser');
+      const userLocId = profile?.currentLocationId ? String(profile.currentLocationId) : '';
+      if (userLocId && ids.has(userLocId)) {
+        nextLocationId = userLocId;
+        localStorage.setItem('selectedLocation', userLocId);
+      }
     }
 
     if (!nextLocationId && data.length > 0) {
@@ -164,12 +164,22 @@ export const Navbar = memo(function Navbar() {
     }
   }, [location, loadLocations, loadActiveRide]);
 
-  const handleLocationChange = useCallback((locationId: string) => {
+  const handleLocationChange = useCallback(async (locationId: string) => {
     setSelectedLocation(locationId);
     localStorage.setItem('selectedLocation', locationId);
+    
+    // If user is logged in, try to update their profile location on the backend
+    if (user && user.id) {
+      await safeAsync(
+        () => usersAPI.update(user.id, { currentLocationId: locationId }),
+        null,
+        'updateUserLocation'
+      );
+    }
+    
     // Reload page to show bikes for new location
     window.location.reload();
-  }, []);
+  }, [user]);
 
   const handleLogout = useCallback(() => {
     authAPI.logout();
@@ -231,21 +241,27 @@ export const Navbar = memo(function Navbar() {
           {/* Location Selector & Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
             {!isSuperAdmin && locations.length > 0 && (
-              <Select value={selectedLocation} onValueChange={handleLocationChange}>
-                <SelectTrigger className="w-48">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Select location">
-                    {selectedLocationData ? formatLocationDisplay(selectedLocationData) : 'Select location'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.id}>
-                      {formatLocationDisplay(loc)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-48 justify-between">
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      <span className="truncate">
+                        {selectedLocationData ? formatLocationDisplay(selectedLocationData) : 'Select location'}
+                      </span>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48">
+                  <DropdownMenuRadioGroup value={selectedLocation} onValueChange={handleLocationChange}>
+                    {locations.map((loc) => (
+                      <DropdownMenuRadioItem key={loc.id} value={loc.id}>
+                        {formatLocationDisplay(loc)}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {user ? (
               <>
@@ -398,21 +414,27 @@ export const Navbar = memo(function Navbar() {
 
               {/* Location Selector for Mobile */}
               {locations.length > 0 && (
-                <Select value={selectedLocation} onValueChange={handleLocationChange}>
-                  <SelectTrigger className="w-full">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Select location">
-                      {selectedLocationData ? formatLocationDisplay(selectedLocationData) : 'Select location'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        {formatLocationDisplay(loc)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span className="truncate">
+                          {selectedLocationData ? formatLocationDisplay(selectedLocationData) : 'Select location'}
+                        </span>
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[calc(100vw-2rem)]">
+                    <DropdownMenuRadioGroup value={selectedLocation} onValueChange={handleLocationChange}>
+                      {locations.map((loc) => (
+                        <DropdownMenuRadioItem key={loc.id} value={loc.id}>
+                          {formatLocationDisplay(loc)}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
 
               {navLinks.map((link) => (

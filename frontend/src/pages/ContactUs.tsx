@@ -3,20 +3,25 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { locationsAPI } from "@/lib/api";
+import { locationsAPI, supportAPI } from "@/lib/api";
 import { Location } from "@/types";
 import { SEO } from "@/components/SEO";
+import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_CONTACT = {
   email: 'support@rideflow.com',
   phone: '+91 98765 43210',
-  address: '123 Bike Street, Tech Park, Bangalore'
+  address: 'Select a location to see details'
 };
 
 export default function ContactUs() {
   const [contactInfo, setContactInfo] = useState(DEFAULT_CONTACT);
+  const [locationName, setLocationName] = useState<string>('');
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -28,28 +33,30 @@ export default function ContactUs() {
     const loadContactInfo = async () => {
       try {
         const locations = await locationsAPI.getAll();
-        const selectedId = localStorage.getItem('selectedLocation');
+        if (!locations || locations.length === 0) return;
+
+        let selectedId = localStorage.getItem('selectedLocation');
+        let location = locations.find((l: Location) => l.id === selectedId);
         
-        if (selectedId) {
-          const location = locations.find((l: Location) => l.id === selectedId);
-          if (location) {
-            // Generate dynamic info based on location details
-            // Use city name preferentially as per Navbar logic to avoid "Manali" or incorrect names
-            const displayLocation = location.city || location.name;
-            
-            // Format: [name]@bikerental.com
-            const emailPrefix = displayLocation.toLowerCase().replace(/\s+/g, '');
-            const email = `${emailPrefix}@bikerental.com`;
-            
-            // Address: Just the display location (City/Area)
-            const address = displayLocation;
-            
-            setContactInfo({
-              email,
-              phone: '+91 98765 43210',
-              address
-            });
-          }
+        // Fallback to first location if none selected or found
+        if (!location && locations.length > 0) {
+          location = locations[0];
+        }
+
+        if (location) {
+          setSelectedLocationId(location.id);
+          const displayLocation = location.city || location.name;
+          setLocationName(displayLocation);
+          
+          const emailPrefix = displayLocation.toLowerCase().replace(/\s+/g, '');
+          const email = `${emailPrefix}@bikerental.com`;
+          const address = displayLocation;
+          
+          setContactInfo({
+            email,
+            phone: '+91 98765 43210',
+            address
+          });
         }
       } catch (error) {
         console.error('Failed to load location info', error);
@@ -59,18 +66,63 @@ export default function ContactUs() {
     loadContactInfo();
   }, []);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.firstName || !formData.email || !formData.message) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await supportAPI.create({
+        subject: `Contact Request from ${formData.firstName} ${formData.lastName}`,
+        category: 'contact',
+        description: formData.message,
+        locationId: selectedLocationId,
+        guestName: `${formData.firstName} ${formData.lastName}`.trim(),
+        guestEmail: formData.email
+      });
+
+      toast({
+        title: "Message Sent",
+        description: "Thank you for your message. We'll get back to you soon!",
+      });
+
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        message: ''
+      });
+    } catch (error) {
+      console.error('Failed to send message', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEO 
-        title="Contact Us - 24/7 Support & Location Details"
-        description="Get in touch with RideFlow for any queries, support, or feedback regarding our bike rental services. We offer 24/7 customer assistance for all your rental needs."
-        keywords="contact RideFlow, bike rental support, customer service, bike rental inquiries, RideFlow help desk"
+        title={`Contact Us - ${locationName || '24/7 Support'} & Location Details`}
+        description={`Get in touch with RideFlow ${locationName ? `in ${locationName}` : ''} for any queries, support, or feedback regarding our bike rental services.`}
+        keywords={`contact RideFlow ${locationName || ''}, bike rental support, customer service`}
         schema={[
           {
             "@context": "https://schema.org",
             "@type": "ContactPage",
-            "name": "Contact RideFlow",
-            "description": "Customer support and contact information for RideFlow Bike Rentals.",
+            "name": `Contact RideFlow ${locationName || ''}`,
+            "description": `Customer support and contact information for RideFlow Bike Rentals ${locationName ? `in ${locationName}` : ''}.`,
             "mainEntity": {
               "@type": "Organization",
               "name": "RideFlow",
@@ -78,10 +130,10 @@ export default function ContactUs() {
               "email": contactInfo.email,
               "address": {
                 "@type": "PostalAddress",
-                "streetAddress": "123 Bike Street, Tech Park",
-                "addressLocality": "Bangalore",
-                "addressRegion": "Karnataka",
-                "postalCode": "560100",
+                "streetAddress": locationName || "Our Office",
+                "addressLocality": locationName || "India",
+                "addressRegion": "Telangana",
+                "postalCode": "500001",
                 "addressCountry": "IN"
               }
             }
@@ -156,7 +208,7 @@ export default function ContactUs() {
             {/* Contact Form */}
             <div className="bg-card p-8 rounded-2xl shadow-sm border">
               <h3 className="text-2xl font-semibold mb-6">Send us a Message</h3>
-              <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">First Name</label>
@@ -170,6 +222,7 @@ export default function ContactUs() {
                         }
                       }}
                       maxLength={20}
+                      disabled={loading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -184,6 +237,7 @@ export default function ContactUs() {
                         }
                       }}
                       maxLength={20}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -194,6 +248,7 @@ export default function ContactUs() {
                     placeholder="john@example.com" 
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -203,9 +258,13 @@ export default function ContactUs() {
                     className="min-h-[120px]" 
                     value={formData.message}
                     onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                    disabled={loading}
                   />
                 </div>
-                <Button className="w-full">Send Message</Button>
+                <Button className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send Message
+                </Button>
               </form>
             </div>
           </div>
