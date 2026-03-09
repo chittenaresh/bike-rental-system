@@ -79,7 +79,7 @@ export default function ContactUs() {
 
     setLoading(true);
     try {
-      await supportAPI.create({
+      const ticket = await supportAPI.create({
         subject: `Contact Request from ${formData.firstName} ${formData.lastName}`,
         category: 'contact',
         description: formData.message,
@@ -88,9 +88,11 @@ export default function ContactUs() {
         guestEmail: formData.email
       });
 
+      const ticketIdStr = ticket._id.toString().slice(-8).toUpperCase();
+
       toast({
         title: "Message Sent",
-        description: "Thank you for your message. We'll get back to you soon!",
+        description: `Your request (Ticket ID: #${ticketIdStr}) has been received. Our team will contact you via email.`,
       });
 
       setFormData({
@@ -100,7 +102,6 @@ export default function ContactUs() {
         message: ''
       });
     } catch (error) {
-      console.error('Failed to send message', error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again later.",

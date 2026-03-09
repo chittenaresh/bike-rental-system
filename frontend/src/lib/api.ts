@@ -254,6 +254,9 @@ export const supportAPI = {
     apiRequest<any>(`/support/${id}/messages`, { method: 'POST', body: JSON.stringify(data) }),
   updateStatus: (id: string, data: { status?: string; priority?: string }) => 
     apiRequest<any>(`/support/${id}/status`, { method: 'PUT', body: JSON.stringify(data) }),
+  sendEmailReply: (id: string, data: { content: string }) => 
+    apiRequest<any>(`/support/email-reply/${id}`, { method: 'POST', body: JSON.stringify(data) }),
+  getReplies: (id: string) => apiRequest<any[]>(`/support/${id}/replies`),
   upload: async (file: File) => {
     const fd = new FormData();
     fd.append('file', file);

@@ -40,6 +40,7 @@ import {
   Clock, 
   XCircle,
   Send,
+  Mail,
   Paperclip,
   X,
   MoreVertical
@@ -143,6 +144,7 @@ export function SupportManager() {
     switch (status) {
       case 'open': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'replied': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
       case 'resolved': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
       case 'closed': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
       default: return 'bg-gray-100 text-gray-800';
@@ -185,6 +187,7 @@ export function SupportManager() {
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="open">Open</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="replied">Replied</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
               <SelectItem value="closed">Closed</SelectItem>
             </SelectContent>
@@ -279,6 +282,7 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
   const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [isEmailReply, setIsEmailReply] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -314,8 +318,37 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
     }
   }, [open, currentTicket.messages]);
 
+  const handleSendEmailReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    setSending(true);
+    try {
+      const result = await supportAPI.sendEmailReply(ticket._id, {
+        content: newMessage
+      });
+
+      toast({ title: 'Success', description: 'Email reply sent successfully' });
+      setNewMessage('');
+      setIsEmailReply(false);
+      setCurrentTicket(result.ticket);
+      onUpdate();
+    } catch (error: any) {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to send email reply', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isEmailReply) {
+      return handleSendEmailReply(e);
+    }
     if (!newMessage.trim() && files.length === 0) return;
 
     setSending(true);
@@ -401,6 +434,7 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
                   <SelectContent>
                     <SelectItem value="open">Open</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="replied">Replied</SelectItem>
                     <SelectItem value="resolved">Resolved</SelectItem>
                     <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
@@ -474,20 +508,38 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
           <div className="space-y-6">
             {currentTicket.messages.map((msg, idx) => {
               const isAdmin = msg.senderRole === 'admin' || msg.senderRole === 'superadmin';
+              const isEmailReplyMsg = msg.content.startsWith('[EMAIL REPLY SENT TO');
+              
               return (
                 <div key={idx} className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
                   <div className={`flex items-end gap-2 max-w-[85%] ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                      isAdmin ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'
+                      isAdmin 
+                        ? (isEmailReplyMsg ? 'bg-orange-500 text-white' : 'bg-primary text-primary-foreground')
+                        : 'bg-muted-foreground/20 text-muted-foreground'
                     }`}>
-                      {isAdmin ? 'A' : (msg.guestName ? msg.guestName[0] : (typeof msg.senderId === 'object' ? msg.senderId.name[0] : 'U'))}
+                      {isAdmin ? (isEmailReplyMsg ? <Mail className="h-4 w-4" /> : 'A') : (msg.guestName ? msg.guestName[0] : (typeof msg.senderId === 'object' ? msg.senderId.name[0] : 'U'))}
                     </div>
                     <div className={`rounded-2xl p-4 shadow-sm ${
                       isAdmin 
-                        ? 'bg-primary text-primary-foreground rounded-tr-sm' 
+                        ? (isEmailReplyMsg 
+                            ? 'bg-orange-50 text-orange-900 border border-orange-200 rounded-tr-sm' 
+                            : 'bg-primary text-primary-foreground rounded-tr-sm')
                         : 'bg-background border rounded-tl-sm'
                     }`}>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                      {isEmailReplyMsg ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5 pb-1 border-b border-orange-200/50 mb-1 text-[10px] font-semibold uppercase tracking-wider text-orange-600">
+                            <Mail className="h-3 w-3" />
+                            Email Sent
+                          </div>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                            {msg.content.substring(msg.content.indexOf(']') + 1).trim()}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                      )}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mt-3 grid grid-cols-2 gap-2">
                           {msg.attachments.map((url, i) => (
@@ -510,6 +562,26 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
         </ScrollArea>
 
         <div className="p-4 border-t bg-background">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={isEmailReply ? "default" : "outline"}
+                size="sm"
+                className={`h-7 text-[10px] gap-1 ${isEmailReply ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                onClick={() => setIsEmailReply(!isEmailReply)}
+                disabled={currentTicket.status === 'closed'}
+              >
+                <Mail className="h-3 w-3" />
+                {isEmailReply ? "Email Mode" : "System Mode"}
+              </Button>
+            </div>
+            {isEmailReply && (
+              <span className="text-[10px] text-orange-600 font-medium animate-pulse">
+                Replying to {currentTicket.userId?.email || currentTicket.guestEmail}
+              </span>
+            )}
+          </div>
           <form onSubmit={handleSendMessage} className="space-y-3">
             {currentTicket.status === 'closed' && (
               <div className="flex items-center gap-2 p-3 bg-muted rounded-md text-sm text-muted-foreground justify-center">
@@ -534,8 +606,12 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
                 <Textarea
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder={currentTicket.status === 'closed' ? "Ticket is closed" : "Type your reply..."}
-                  className="pr-12 min-h-[44px] max-h-[120px] resize-none py-3"
+                  placeholder={
+                    currentTicket.status === 'closed' 
+                      ? "Ticket is closed" 
+                      : (isEmailReply ? "Type your email reply..." : "Type your internal message...")
+                  }
+                  className={`pr-12 min-h-[44px] max-h-[120px] resize-none py-3 ${isEmailReply ? 'border-orange-200 focus-visible:ring-orange-500' : ''}`}
                   rows={1}
                   disabled={currentTicket.status === 'closed'}
                   onKeyDown={(e) => {
@@ -546,33 +622,39 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
                   }}
                 />
                 <div className="absolute right-2 bottom-2">
-                  <Input 
-                    type="file" 
-                    id="admin-chat-file-upload" 
-                    className="hidden" 
-                    multiple 
-                    accept="image/*"
-                    disabled={currentTicket.status === 'closed'}
-                    onChange={(e) => {
-                      if (e.target.files) setFiles([...files, ...Array.from(e.target.files)]);
-                    }} 
-                  />
-                  <label 
-                    htmlFor="admin-chat-file-upload" 
-                    className={`cursor-pointer text-muted-foreground hover:text-primary p-2 rounded-md hover:bg-muted transition-colors flex items-center justify-center ${currentTicket.status === 'closed' ? 'opacity-50 pointer-events-none' : ''}`}
-                    title="Attach images"
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </label>
+                  {!isEmailReply && (
+                    <Input 
+                      type="file" 
+                      id="admin-chat-file-upload" 
+                      className="hidden" 
+                      multiple 
+                      accept="image/*"
+                      disabled={currentTicket.status === 'closed'}
+                      onChange={(e) => {
+                        if (e.target.files) setFiles([...files, ...Array.from(e.target.files)]);
+                      }} 
+                    />
+                  )}
+                  {!isEmailReply && (
+                    <label 
+                      htmlFor="admin-chat-file-upload" 
+                      className={`cursor-pointer text-muted-foreground hover:text-primary p-2 rounded-md hover:bg-muted transition-colors flex items-center justify-center ${currentTicket.status === 'closed' ? 'opacity-50 pointer-events-none' : ''}`}
+                      title="Attach images"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </label>
+                  )}
                 </div>
               </div>
               <Button 
                 type="submit" 
                 size="icon" 
-                className="h-[44px] w-[44px] shrink-0"
+                className={`h-[44px] w-[44px] shrink-0 rounded-xl shadow-lg transition-all active:scale-95 ${
+                  isEmailReply ? 'bg-orange-500 hover:bg-orange-600' : ''
+                }`}
                 disabled={sending || (!newMessage.trim() && files.length === 0) || currentTicket.status === 'closed'}
               >
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : (isEmailReply ? <Mail className="h-4 w-4" /> : <Send className="h-4 w-4" />)}
               </Button>
             </div>
           </form>

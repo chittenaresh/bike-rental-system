@@ -54,7 +54,7 @@ const supportTicketSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['open', 'in_progress', 'resolved', 'closed'],
+    enum: ['open', 'in_progress', 'replied', 'resolved', 'closed'],
     default: 'open'
   },
   priority: {

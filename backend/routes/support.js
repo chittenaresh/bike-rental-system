@@ -3,11 +3,110 @@ import jwt from 'jsonwebtoken';
 import { authenticateToken } from './auth.js';
 import SupportTicket from '../models/SupportTicket.js';
 import User from '../models/User.js';
+import SupportReply from '../models/SupportReply.js';
+import { sendEmail } from '../utils/email.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// Send email reply to guest/user
+router.post('/email-reply/:id', authenticateToken, async (req, res) => {
+  try {
+    const { content } = req.body;
+    const ticket = await SupportTicket.findById(req.params.id).populate('userId');
+    
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+
+    const admin = await User.findById(req.user.userId);
+    if (!['admin', 'superadmin'].includes(admin.role)) {
+      return res.status(403).json({ message: 'Only admins can send email replies' });
+    }
+
+    const recipientEmail = ticket.userId ? ticket.userId.email : ticket.guestEmail;
+    const recipientName = ticket.userId ? ticket.userId.name : ticket.guestName;
+
+    if (!recipientEmail) {
+      return res.status(400).json({ message: 'No email found for this ticket' });
+    }
+
+    // 1. Send Email
+    try {
+      await sendEmail({
+        to: recipientEmail,
+        subject: `Re: [Ticket #${ticket._id.toString().slice(-8)}] ${ticket.subject}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+            <h2 style="color: #F97316;">Support Reply</h2>
+            <p>Hi ${recipientName},</p>
+            <p>Our team has replied to your support ticket:</p>
+            <div style="background-color: #f9f9f9; padding: 20px; border-left: 4px solid #F97316; margin: 20px 0;">
+              ${content.replace(/\n/g, '<br>')}
+            </div>
+            <p>Ticket Details:</p>
+            <ul>
+              <li><b>Ticket ID:</b> ${ticket._id}</li>
+              <li><b>Subject:</b> ${ticket.subject}</li>
+              <li><b>Status:</b> Replied</li>
+            </ul>
+            <p>If you have any further questions, feel free to reply to this email or visit our website.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 12px; color: #666;">This is an automated message from RideFlow Support.</p>
+          </div>
+        `,
+        text: `Hi ${recipientName},\n\nOur team has replied to your support ticket:\n\n${content}\n\nTicket Details:\nTicket ID: ${ticket._id}\nSubject: ${ticket.subject}\nStatus: Replied`
+      });
+    } catch (emailError) {
+      console.error('Email delivery failed:', emailError);
+      return res.status(500).json({ 
+        message: 'Failed to send email', 
+        details: emailError.message,
+        code: emailError.code || 'UNKNOWN_ERROR'
+      });
+    }
+
+    // 2. Save to support_replies (SupportReply model)
+    const reply = new SupportReply({
+      ticketId: ticket._id,
+      adminId: admin._id,
+      content,
+      sentVia: 'email'
+    });
+    await reply.save();
+
+    // 3. Update ticket messages and status
+    ticket.messages.push({
+      senderId: admin._id,
+      senderRole: admin.role,
+      content: `[EMAIL REPLY SENT TO ${recipientEmail}]\n\n${content}`,
+      createdAt: Date.now()
+    });
+    
+    ticket.status = 'replied';
+    ticket.updatedAt = Date.now();
+    await ticket.save();
+
+    const updatedTicket = await SupportTicket.findById(req.params.id)
+      .populate('userId', 'name email mobile')
+      .populate({ 
+        path: 'rentalId',
+        populate: { path: 'bikeId', select: 'name brand image locationId' }
+      })
+      .populate('messages.senderId', 'name role');
+
+    res.json({
+      message: 'Email reply sent successfully',
+      ticket: updatedTicket
+    });
+
+  } catch (error) {
+    console.error('Email reply error:', error);
+    res.status(500).json({ message: 'Error sending email reply', error: error.message });
+  }
+});
 
 // Upload attachment
 router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
@@ -242,6 +341,19 @@ router.post('/:id/messages', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Add message error:', error);
     res.status(500).json({ message: 'Error adding message' });
+  }
+});
+
+// Get reply history for a ticket
+router.get('/:id/replies', authenticateToken, async (req, res) => {
+  try {
+    const replies = await SupportReply.find({ ticketId: req.params.id })
+      .populate('adminId', 'name email role')
+      .sort({ createdAt: 1 });
+    res.json(replies);
+  } catch (error) {
+    console.error('Get replies error:', error);
+    res.status(500).json({ message: 'Error fetching replies' });
   }
 });
 
