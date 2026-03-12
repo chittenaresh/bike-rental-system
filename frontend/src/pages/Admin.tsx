@@ -1254,20 +1254,6 @@ export default function Admin() {
                               {r.status === 'confirmed' && (
                                 <>
                                   <Button
-                                    size="sm"
-                                    onClick={async () => {
-                                      try {
-                                        await rentalsAPI.startRide(r.id);
-                                        toast({ title: "Ride Started", description: "Booking started successfully." });
-                                        loadData();
-                                      } catch (e: any) {
-                                        toast({ title: "Error", description: e.message || "Failed to start ride", variant: "destructive" });
-                                      }
-                                    }}
-                                  >
-                                    Start Ride
-                                  </Button>
-                                  <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={async () => {

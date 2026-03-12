@@ -23,10 +23,12 @@ import { usersAPI, rentalsAPI, documentsAPI, getCurrentUser, authAPI, locationsA
 import { generateInvoice } from '@/lib/invoiceGenerator';
 import { SEO } from '@/components/SEO';
 
-const statusStyles = {
-  approved: { color: 'bg-accent/10 text-accent', icon: CheckCircle },
-  pending: { color: 'bg-primary/10 text-primary', icon: Clock },
-  rejected: { color: 'bg-destructive/10 text-destructive', icon: XCircle },
+const rentalStatusStyles = {
+  confirmed: { color: 'bg-blue-500/10 text-blue-500', icon: Clock },
+  ongoing: { color: 'bg-accent/10 text-accent', icon: Bike },
+  active: { color: 'bg-accent/10 text-accent', icon: Bike },
+  completed: { color: 'bg-green-500/10 text-green-500', icon: CheckCircle },
+  cancelled: { color: 'bg-destructive/10 text-destructive', icon: XCircle },
 };
 
 const formatLocationDisplay = (loc: any): string => {
@@ -450,7 +452,7 @@ export default function Dashboard() {
                     <div className="space-y-4">
                       {rentals.slice(0, 3).length > 0 ? (
                         rentals.slice(0, 3).map((rental) => {
-                          const StatusIcon = statusStyles[rental.status as keyof typeof statusStyles]?.icon || Clock;
+                          const StatusIcon = rentalStatusStyles[rental.status as keyof typeof rentalStatusStyles]?.icon || Clock;
                           return (
                             <div key={rental.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
                               <div className="flex items-center gap-4">
@@ -913,7 +915,7 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     {rentals.length > 0 ? (
                       rentals.map((rental) => {
-                        const StatusIcon = statusStyles[rental.status as keyof typeof statusStyles]?.icon || Clock;
+                        const StatusIcon = rentalStatusStyles[rental.status as keyof typeof rentalStatusStyles]?.icon || Clock;
                         const bike = rental.bike || (typeof rental.bikeId === 'object' ? rental.bikeId : null);
                         const bikeName = bike?.name || 'Unknown Bike';
                         const bikeImage = bike?.image || '';
@@ -1037,32 +1039,34 @@ export default function Dashboard() {
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-3">
-                              <Badge className={statusStyles[rental.status as keyof typeof statusStyles]?.color || 'bg-muted'}>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={`${rentalStatusStyles[rental.status as keyof typeof rentalStatusStyles]?.color || 'bg-muted'} mb-2`}>
                                 <StatusIcon className="h-3 w-3 mr-1" />
                                 {rental.status.charAt(0).toUpperCase() + rental.status.slice(1)}
                               </Badge>
                               
-                              {rental.status === 'completed' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => generateInvoice(rental, user)}
-                                  className="gap-2"
-                                >
-                                  <Download className="h-4 w-4" />
-                                  Invoice
+                              {['confirmed', 'ongoing', 'active'].includes(rental.status) && (
+                                <Button size="sm" onClick={() => navigate('/active-ride')}>
+                                  View Ride
+                                </Button>
+                              )}
+
+                              {rental.status === 'confirmed' && (
+                                <Button size="sm" variant="destructive" onClick={() => handleAction('cancel', rental.id)}>
+                                  Cancel
                                 </Button>
                               )}
                               
-                              {rental.status === 'confirmed' && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => toast({ title: "Coming Soon", description: "Cancellation feature coming soon." })}
-                                >
-                                  Cancel
+                              {rental.status === 'completed' && !rental.review && (
+                                <Button size="sm" variant="outline" onClick={() => handleReview(rental.id)}>
+                                  Leave Review
+                                </Button>
+                              )}
+                              
+                              {rental.status === 'completed' && (
+                                <Button size="sm" variant="ghost" onClick={() => generateInvoice(rental, bike)}>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Invoice
                                 </Button>
                               )}
                             </div>

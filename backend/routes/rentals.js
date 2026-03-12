@@ -177,12 +177,29 @@ router.post('/:id/start', authenticateToken, async (req, res) => {
   try {
     const rental = await Rental.findById(req.params.id);
     if (!rental) return res.status(404).json({ message: 'Rental not found' });
-    if (rental.status !== 'confirmed') return res.status(400).json({ message: 'Rental is not confirmed' });
+    
+    // Only the user who booked the rental can start the ride
+    const currentUser = await User.findById(req.user.userId);
+    if (!['admin', 'superadmin'].includes(currentUser.role) && rental.userId.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Only the user who booked can start the ride' });
+    }
+
+    if (rental.status !== 'confirmed') {
+      return res.status(400).json({ message: `Cannot start ride. Current status is ${rental.status}` });
+    }
+
+    // Require bike condition images before starting
+    if (!Array.isArray(rental.userImages) || rental.userImages.length < 5) {
+      return res.status(400).json({ message: 'Please upload at least 5 bike condition images before starting your ride.' });
+    }
 
     rental.status = 'ongoing';
+    rental.startTime = new Date(); // Reset start time to actual ride start time
     await rental.save();
-    res.json(rental);
+    
+    res.json(transformRental(rental));
   } catch (error) {
+    console.error('Start ride error:', error);
     res.status(500).json({ message: 'Error starting ride' });
   }
 });
@@ -304,6 +321,30 @@ router.post('/:id/review', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Review error:', error);
     res.status(500).json({ message: 'Error submitting review' });
+  }
+});
+
+router.post('/:id/images', authenticateToken, async (req, res) => {
+  try {
+    const { images } = req.body;
+    if (!Array.isArray(images)) {
+      return res.status(400).json({ message: 'Images must be an array' });
+    }
+
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) return res.status(404).json({ message: 'Rental not found' });
+    
+    // Only allow users to update their own rentals, admins can update any
+    if (!['admin', 'superadmin'].includes(req.user.role) && rental.userId.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    rental.userImages = images;
+    await rental.save();
+    res.json({ success: true, userImages: rental.userImages });
+  } catch (error) {
+    console.error('Update images error:', error);
+    res.status(500).json({ message: 'Error updating rental images' });
   }
 });
 

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Bike,
   Calendar,
@@ -13,13 +14,18 @@ import {
   CheckCircle,
   XCircle,
   ArrowLeft,
+  Camera,
+  Upload,
+  X,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { rentalsAPI, bikesAPI, getCurrentUser } from '@/lib/api';
+import { rentalsAPI, bikesAPI, getCurrentUser, documentsAPI } from '@/lib/api';
 import { safeAsync } from '@/lib/errorHandler';
 import { calculateSimplePrice } from '@/utils/simplePriceCalculator';
 import { calculateRentalPrice } from '@/utils/priceCalculator';
 import { SEO } from '@/components/SEO';
+
+const MAX_IMAGES = 5;
 
 const statusStyles = {
   confirmed: { color: 'bg-primary/10 text-primary', icon: Clock },
@@ -40,6 +46,16 @@ export default function ActiveRide() {
   const [extendHours, setExtendHours] = useState(1);
   const [canExtend, setCanExtend] = useState(false);
 
+  // Image upload state
+  const [extraImages, setExtraImages] = useState<(string | null)[]>(Array(MAX_IMAGES).fill(null));
+  const [uploading, setUploading] = useState<number | null>(null);
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>(Array(MAX_IMAGES).fill(null));
+  const [showCamera, setShowCamera] = useState(false);
+  const [activeCameraIndex, setActiveCameraIndex] = useState<number | null>(null);
+  const [cameraError, setCameraError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) {
@@ -48,25 +64,149 @@ export default function ActiveRide() {
     }
 
     loadActiveRide(user);
+    return () => {
+      stopCamera();
+    };
   }, []);
+
+  const startCamera = async () => {
+    try {
+      setCameraError(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      
+      if (!videoRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      setCameraError(true);
+      toast({ 
+        title: 'Camera Error', 
+        description: 'Unable to access camera. Please try uploading a file instead.', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || activeCameraIndex === null) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(videoRef.current, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `camera_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          handleFileProcess(activeCameraIndex, file);
+          setShowCamera(false);
+          stopCamera();
+        }
+      }, 'image/jpeg', 0.8);
+    }
+  };
+
+  const openCamera = (index: number) => {
+    setActiveCameraIndex(index);
+    setShowCamera(true);
+    setTimeout(startCamera, 100);
+  };
+
+  const handleFileUpload = () => {
+    if (activeCameraIndex !== null) {
+      fileInputRefs.current[activeCameraIndex]?.click();
+      setShowCamera(false);
+      stopCamera();
+    }
+  };
+
+  const onPickFile = (index: number) => {
+    openCamera(index);
+  };
+
+  const handleFileProcess = async (index: number, file: File) => {
+    if (extraImages[index]) {
+      toast({ title: 'Slot already filled', description: 'Please remove the existing image first', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      setUploading(index);
+      const res = await documentsAPI.uploadFile(file, file.name, 'rental_bike_image');
+      const imageUrl = res?.fileUrl || res?.url;
+      
+      if (imageUrl) {
+        const newImages = [...extraImages];
+        newImages[index] = imageUrl;
+        setExtraImages(newImages);
+        
+        // Save to rental immediately
+        if (rental) {
+          const validImages = newImages.filter((img): img is string => img !== null);
+          await rentalsAPI.updateImages(rental.id, validImages);
+        }
+        
+        toast({ title: 'Image uploaded', description: 'Image added successfully' });
+      } else {
+        toast({ title: 'Upload failed', description: 'No file URL returned', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
+    } finally {
+      setUploading(null);
+      if (fileInputRefs.current[index]) fileInputRefs.current[index]!.value = '';
+    }
+  };
+
+  const onFileSelected = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleFileProcess(index, file);
+  };
+
+  const removeImage = async (index: number) => {
+    const newImages = [...extraImages];
+    newImages[index] = null;
+    setExtraImages(newImages);
+    
+    // Update rental
+    if (rental) {
+      const validImages = newImages.filter((img): img is string => img !== null);
+      await rentalsAPI.updateImages(rental.id, validImages);
+    }
+  };
 
   const loadActiveRide = async (currentUser: any) => {
     try {
       setIsLoading(true);
       const rentals = await rentalsAPI.getAll();
-      // Only show active ride when ride is started (ongoing/active), not when just confirmed
       const active = rentals.find((r: any) => {
         const rentalUserId = r.userId || r.user?.id;
         return (
           String(rentalUserId || '') === String(currentUser?.id || '') &&
-          (r.status === 'ongoing' || r.status === 'active')
+          (r.status === 'ongoing' || r.status === 'active' || r.status === 'confirmed')
         );
       });
 
       if (!active) {
         toast({
           title: "No Active Ride",
-          description: "You don't have an active ride. Please wait for admin to start your ride.",
+          description: "You don't have an active or confirmed ride. Please book a bike first.",
           variant: "destructive",
         });
         navigate('/dashboard');
@@ -74,6 +214,15 @@ export default function ActiveRide() {
       }
 
       setRental(active);
+      
+      // Initialize images if they exist in the rental
+      if (active.userImages && Array.isArray(active.userImages)) {
+        const initialImages = Array(MAX_IMAGES).fill(null);
+        active.userImages.forEach((url: string, idx: number) => {
+          if (idx < MAX_IMAGES) initialImages[idx] = url;
+        });
+        setExtraImages(initialImages);
+      }
       
       // Calculate initial duration (ensure non-negative)
       const startTime = new Date(active.pickupTime || active.startTime);
@@ -261,6 +410,40 @@ export default function ActiveRide() {
     }
   };
 
+  const handleStartRide = async () => {
+    if (!rental) return;
+    
+    const filledSlots = extraImages.filter(img => img !== null).length;
+    if (filledSlots < MAX_IMAGES) {
+      toast({
+        title: "Images Required",
+        description: `Please upload all ${MAX_IMAGES} bike condition images before starting your ride.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await rentalsAPI.startRide(rental.id);
+      toast({
+        title: "Ride Started",
+        description: "Your ride has been started successfully! Have a safe journey.",
+      });
+      
+      // Reload the rental data
+      const user = getCurrentUser();
+      if (user) {
+        await loadActiveRide(user);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start ride. Please ensure you have uploaded all required images.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -431,55 +614,198 @@ export default function ActiveRide() {
               </div>
 
               {/* Actions */}
-              {(rental.status === 'ongoing' || rental.status === 'active') && (
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {canExtend && (
-                    <div className="flex-1 flex items-center gap-4">
-                      <label className="text-sm font-medium">Extend by:</label>
-                      <select
-                        value={extendHours}
-                        onChange={(e) => setExtendHours(Number(e.target.value))}
-                        className="px-3 py-2 border rounded-lg bg-background"
-                      >
-                        <option value={1}>1 hour</option>
-                        <option value={2}>2 hours</option>
-                        <option value={3}>3 hours</option>
-                        <option value={4}>4 hours</option>
-                        <option value={5}>5 hours</option>
-                      </select>
-                      <Button 
-                        onClick={handleExtendRide} 
-                        variant="outline"
-                        disabled={!canExtend}
-                        className={!canExtend ? 'opacity-50 cursor-not-allowed' : ''}
-                      >
-                        Extend Ride
-                      </Button>
+              {rental.status === 'confirmed' && (
+                <div className="space-y-6 pt-6 border-t">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Unlock & Inspect Bike</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Please unlock the bike and upload {MAX_IMAGES} clear images of the bike's current condition to start your ride.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {Array.from({ length: MAX_IMAGES }).map((_, index) => {
+                        const imageUrl = extraImages[index];
+                        const isUploading = uploading === index;
+                        return (
+                          <div key={index} className="relative w-full aspect-square">
+                            <input
+                              ref={(el) => { fileInputRefs.current[index] = el; }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => onFileSelected(index, e)}
+                              disabled={isUploading || !!imageUrl}
+                            />
+                            {imageUrl ? (
+                              <div className="relative w-full h-full rounded-xl border overflow-hidden group">
+                                <img
+                                  src={imageUrl}
+                                  alt={`Bike condition ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(index)}
+                                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                >
+                                  <X className="h-5 w-5 text-white" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onPickFile(index)}
+                                disabled={isUploading}
+                                className="w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors"
+                              >
+                                {isUploading ? (
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                                ) : (
+                                  <Camera className="h-6 w-6" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                  {!canExtend && rental.dropoffTime && (
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">
-                        Extension window closed. You can only extend rides more than 1 hour before the scheduled end time.
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex flex-col items-end gap-2">
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-center gap-4 pt-6 border-t">
                     <Button 
-                      onClick={handleEndRide} 
-                      variant="destructive" 
+                      variant="outline" 
                       size="lg"
-                      disabled={!canEndRide}
-                      className={!canEndRide ? 'opacity-50 cursor-not-allowed' : ''}
-                      title={!canEndRide ? `Please wait ${timeRemaining} more minute${timeRemaining !== 1 ? 's' : ''} before ending the ride` : 'End your ride'}
+                      onClick={() => navigate('/support')}
+                      className="w-full sm:w-auto"
                     >
-                      End Ride
+                      Need Help?
                     </Button>
-                    {!canEndRide && timeRemaining > 0 && (
-                      <p className="text-xs text-muted-foreground text-right">
-                        Minimum 1 hour required. {timeRemaining} minute{timeRemaining !== 1 ? 's' : ''} remaining
-                      </p>
+                    <Button 
+                      onClick={handleStartRide} 
+                      className="w-full sm:flex-1 h-14 text-lg font-bold shadow-hero"
+                      disabled={extraImages.filter(img => img !== null).length < MAX_IMAGES}
+                    >
+                      Start Ride
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {(rental.status === 'ongoing' || rental.status === 'active') && (
+                <div className="space-y-6">
+                  {/* Bike Condition Images */}
+                  <div className="pt-6 border-t">
+                    <h3 className="text-lg font-semibold mb-2">Bike Condition Images</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Please upload clear images of the bike (minimum 2, maximum 5) for your safety and verification.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {Array.from({ length: MAX_IMAGES }).map((_, index) => {
+                        const imageUrl = extraImages[index];
+                        const isUploading = uploading === index;
+                        return (
+                          <div key={index} className="relative w-full aspect-square">
+                            <input
+                              ref={(el) => { fileInputRefs.current[index] = el; }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => onFileSelected(index, e)}
+                              disabled={isUploading || !!imageUrl}
+                            />
+                            {imageUrl ? (
+                              <div className="relative w-full h-full rounded-xl border overflow-hidden group">
+                                <img
+                                  src={imageUrl}
+                                  alt={`Bike condition ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(index)}
+                                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                >
+                                  <X className="h-5 w-5 text-white" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onPickFile(index)}
+                                disabled={isUploading}
+                                className="w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors"
+                              >
+                                {isUploading ? (
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                                ) : (
+                                  <Camera className="h-6 w-6" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t">
+                    {canExtend && (
+                      <div className="flex-1 flex items-center gap-4">
+                        <label className="text-sm font-medium">Extend by:</label>
+                        <select
+                          value={extendHours}
+                          onChange={(e) => setExtendHours(Number(e.target.value))}
+                          className="px-3 py-2 border rounded-lg bg-background"
+                        >
+                          <option value={1}>1 hour</option>
+                          <option value={2}>2 hours</option>
+                          <option value={3}>3 hours</option>
+                          <option value={4}>4 hours</option>
+                          <option value={5}>5 hours</option>
+                        </select>
+                        <Button 
+                          onClick={handleExtendRide} 
+                          variant="outline"
+                          disabled={!canExtend}
+                          className={!canExtend ? 'opacity-50 cursor-not-allowed' : ''}
+                        >
+                          Extend Ride
+                        </Button>
+                      </div>
                     )}
+                    {!canExtend && rental.dropoffTime && (
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">
+                          Extension window closed. You can only extend rides more than 1 hour before the scheduled end time.
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                      <Button 
+                        variant="outline" 
+                        size="lg"
+                        onClick={() => navigate('/support')}
+                        className="w-full sm:w-auto"
+                      >
+                        Support
+                      </Button>
+                      <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+                        <Button 
+                          onClick={handleEndRide} 
+                          variant="destructive" 
+                          size="lg"
+                          disabled={!canEndRide}
+                          className={`w-full sm:w-auto ${!canEndRide ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={!canEndRide ? `Please wait ${timeRemaining} more minute${timeRemaining !== 1 ? 's' : ''} before ending the ride` : 'End your ride'}
+                        >
+                          End Ride
+                        </Button>
+                        {!canEndRide && timeRemaining > 0 && (
+                          <p className="text-xs text-muted-foreground text-right">
+                            Minimum 1 hour required. {timeRemaining} minute{timeRemaining !== 1 ? 's' : ''} remaining
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -487,6 +813,48 @@ export default function ActiveRide() {
           </div>
       </main>
       <Footer />
+
+      <Dialog open={showCamera} onOpenChange={(open) => {
+        if (!open) {
+          setShowCamera(false);
+          stopCamera();
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Take Photo</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="relative aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
+              {cameraError ? (
+                <div className="text-white text-sm p-4 text-center">
+                  <p className="font-bold mb-1">Camera Unavailable</p>
+                  <p className="text-xs text-gray-400">Please use the "Upload File" button below.</p>
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={handleFileUpload}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload File
+              </Button>
+              {!cameraError && (
+                <Button className="flex-1" onClick={capturePhoto}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Capture
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

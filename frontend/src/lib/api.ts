@@ -146,6 +146,8 @@ export const rentalsAPI = {
   delete: (id: string) => apiRequest<void>(`/rentals/${id}`, { method: 'DELETE' }),
   submitReview: (id: string, data: { rating: number; comment: string }) =>
     apiRequest<any>(`/rentals/${id}/review`, { method: 'POST', body: JSON.stringify(data) }),
+  updateImages: (id: string, images: string[]) =>
+    apiRequest<any>(`/rentals/${id}/images`, { method: 'POST', body: JSON.stringify({ images }) }),
 };
 
 export const usersAPI = {

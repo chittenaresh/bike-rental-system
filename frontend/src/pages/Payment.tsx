@@ -1,15 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { SEO } from '@/components/SEO';
 import { getCurrentUser, paymentsAPI, documentsAPI, rentalsAPI } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { Bike } from '@/types';
-import { Camera, X, Upload, RefreshCw } from 'lucide-react';
 import { calculateRentalPrice } from '@/utils/priceCalculator';
 import { calculateSimplePrice } from '@/utils/simplePriceCalculator';
 
@@ -22,30 +20,17 @@ interface BookingDetails {
   pricingType?: 'hourly' | 'daily' | 'weekly';
 }
 
-const MAX_IMAGES = 5;
+
 
 export default function Payment() {
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [extraImages, setExtraImages] = useState<(string | null)[]>(Array(MAX_IMAGES).fill(null));
-  const [uploading, setUploading] = useState<number | null>(null);
-  const fileInputRefs = useRef<(HTMLInputElement | null)[]>(Array(MAX_IMAGES).fill(null));
-  
-  // Camera related state
-  const [showCamera, setShowCamera] = useState(false);
-  const [activeCameraIndex, setActiveCameraIndex] = useState<number | null>(null);
-  const [cameraError, setCameraError] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
 
   const bookingDetails = location.state?.bookingDetails as BookingDetails;
 
   useEffect(() => {
     checkActiveRental();
-    return () => {
-      stopCamera();
-    };
   }, []);
 
   const checkActiveRental = async () => {
@@ -72,76 +57,6 @@ export default function Payment() {
       console.error('Failed to check active rental', error);
     }
   };
-
-  const startCamera = async () => {
-    try {
-      setCameraError(false);
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      
-      // Check if video element still exists (dialog is open)
-      if (!videoRef.current) {
-        stream.getTracks().forEach(track => track.stop());
-        return;
-      }
-
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
-    } catch (err) {
-      console.error("Error accessing camera:", err);
-      setCameraError(true);
-      toast({ 
-        title: 'Camera Error', 
-        description: 'Unable to access camera. Please try uploading a file instead.', 
-        variant: 'destructive' 
-      });
-      // Do not close the dialog so user can choose upload file
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current || activeCameraIndex === null) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(videoRef.current, 0, 0);
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], `camera_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-          handleFileProcess(activeCameraIndex, file);
-          setShowCamera(false);
-          stopCamera();
-        }
-      }, 'image/jpeg', 0.8);
-    }
-  };
-
-  const openCamera = (index: number) => {
-    setActiveCameraIndex(index);
-    setShowCamera(true);
-    // Slight delay to ensure modal is open before starting camera
-    setTimeout(startCamera, 100);
-  };
-
-  const handleFileUpload = () => {
-    if (activeCameraIndex !== null) {
-      fileInputRefs.current[activeCameraIndex]?.click();
-      setShowCamera(false);
-      stopCamera();
-    }
-  };
-
 
   useEffect(() => {
     if (!bookingDetails) {
@@ -242,67 +157,8 @@ export default function Payment() {
     };
   }
 
-  const onPickFile = (index: number) => {
-    openCamera(index);
-  };
-
-  const handleFileProcess = async (index: number, file: File) => {
-    // Check if slot is already filled
-    if (extraImages[index]) {
-      toast({ title: 'Slot already filled', description: 'Please remove the existing image first', variant: 'destructive' });
-      return;
-    }
-
-    try {
-      setUploading(index);
-      const res = await documentsAPI.uploadFile(file, file.name, 'rental_bike_image');
-      const imageUrl = res?.fileUrl || res?.url;
-      
-      if (imageUrl) {
-        setExtraImages((prev) => {
-          const newImages = [...prev];
-          newImages[index] = imageUrl;
-          return newImages;
-        });
-        toast({ title: 'Image uploaded', description: 'Image added successfully' });
-      } else {
-        toast({ title: 'Upload failed', description: 'No file URL returned', variant: 'destructive' });
-      }
-    } catch (err: any) {
-      toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
-    } finally {
-      setUploading(null);
-      if (fileInputRefs.current[index]) fileInputRefs.current[index]!.value = '';
-    }
-  };
-
-  const onFileSelected = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    handleFileProcess(index, file);
-  };
-
-  const removeImage = (index: number) => {
-    setExtraImages((prev) => {
-      const newImages = [...prev];
-      newImages[index] = null;
-      return newImages;
-    });
-  };
-
-  const filledSlots = extraImages.filter(img => img !== null).length;
-  const canAddMore = filledSlots < MAX_IMAGES;
-
   const handlePayment = async () => {
     try {
-      if (filledSlots < MAX_IMAGES) {
-        toast({
-          title: 'Images Required',
-          description: `Please upload all ${MAX_IMAGES} bike images before payment.`,
-          variant: 'destructive',
-        });
-        return;
-      }
       setLoading(true);
       const finalAmount = priceInfo ? Math.round(priceInfo.total) : totalAmount;
       const { keyId } = await paymentsAPI.getKey();
@@ -329,7 +185,7 @@ export default function Payment() {
                 totalAmount: finalAmount,
                 pricingType,
                 selectedLocationId,
-                additionalImages: extraImages.filter((img): img is string => img !== null)
+                additionalImages: []
               }
             });
             
@@ -371,7 +227,7 @@ export default function Payment() {
     <div className="min-h-screen flex flex-col">
       <SEO 
         title="Complete Your Booking"
-        description="Securely complete your bike rental booking on RideFlow. Upload necessary documents and proceed to payment."
+        description="Securely complete your bike rental booking on RideFlow. Proceed to payment."
         noindex={true}
       />
       <Navbar />
@@ -383,63 +239,6 @@ export default function Payment() {
               <CardTitle>{bike.name}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <div className="mb-2">
-                  <span className="font-medium">Bike Images</span>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                  {Array.from({ length: MAX_IMAGES }).map((_, index) => {
-                    const imageUrl = extraImages[index];
-                    const isUploading = uploading === index;
-                    return (
-                      <div key={index} className="relative w-full aspect-square">
-                        <input
-                          ref={(el) => { fileInputRefs.current[index] = el; }}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => onFileSelected(index, e)}
-                          disabled={isUploading || !!imageUrl}
-                        />
-                        {imageUrl ? (
-                          <div className="relative w-full h-full rounded-md border overflow-hidden group">
-                            <img
-                              src={imageUrl}
-                              alt={`Bike condition photo ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(index)}
-                              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                              aria-label="Remove image"
-                            >
-                              <X className="h-5 w-5 text-white" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => onPickFile(index)}
-                            disabled={isUploading}
-                            className="w-full h-full rounded-md border border-dashed flex items-center justify-center text-muted-foreground hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            aria-label="Add image"
-                          >
-                            {isUploading ? (
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                            ) : (
-                              <Camera className="h-6 w-6" />
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Upload all {MAX_IMAGES} bike images to proceed ({filledSlots}/{MAX_IMAGES} uploaded).
-                </p>
-              </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Pickup</span>
                 <span className="font-medium">{new Date(pickupTime).toLocaleString()}</span>
@@ -494,7 +293,7 @@ export default function Payment() {
                 className="w-full" 
                 size="lg" 
                 onClick={handlePayment}
-                disabled={loading || filledSlots < MAX_IMAGES}
+                disabled={loading}
               >
                 {loading ? 'Processing...' : `Pay ₹${(priceInfo ? priceInfo.total : (totalAmount || 0)).toFixed(2)}`}
               </Button>
@@ -503,45 +302,6 @@ export default function Payment() {
         </div>
       </div>
       <Footer />
-      <Dialog open={showCamera} onOpenChange={(open) => {
-        if (!open) {
-          setShowCamera(false);
-          stopCamera();
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Take Photo</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
-              {cameraError ? (
-                <div className="text-white text-sm p-4 text-center">
-                  <p className="font-bold mb-1">Camera Unavailable</p>
-                  <p className="text-xs text-gray-400">Please use the "Upload File" button below.</p>
-                </div>
-              ) : (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={handleFileUpload}>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload File
-              </Button>
-              <Button className="flex-1" onClick={capturePhoto}>
-                <Camera className="mr-2 h-4 w-4" />
-                Capture
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
