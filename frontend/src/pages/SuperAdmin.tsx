@@ -28,6 +28,12 @@ import {
   Calendar,
   Moon,
   Sun,
+  Maximize2,
+  Download,
+  Wrench,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from 'lucide-react';
 import { HeroImageManager } from '@/components/HeroImageManager';
 import { toast } from '@/hooks/use-toast';
@@ -109,24 +115,55 @@ export default function SuperAdmin() {
   const [editAdminOtherCity, setEditAdminOtherCity] = useState<string>('');
   const [bikeDialogOpen, setBikeDialogOpen] = useState(false);
   const [editingBike, setEditingBike] = useState<any | null>(null);
-  const [bikeForm, setBikeForm] = useState<any>({ 
-    name: '', 
-    brand: '', 
-    year: '', 
-    type: 'fuel', 
-    category: 'midrange', 
-    pricePerHour: '', 
-    kmLimit: '', 
-    locationId: '', 
-    image: '',
-    images: ['', '', ''],
-    weekdayRate: '',
-    weekendRate: '',
-    excessKmCharge: '',
-    kmLimitPerHour: '',
-    minBookingHours: '',
-    gstPercentage: '18'
-  });
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+    const [zoomScale, setZoomScale] = useState(1);
+    const [bikeForm, setBikeForm] = useState<any>({ 
+      name: '', 
+      brand: '', 
+      year: '', 
+      type: 'fuel', 
+      category: 'midrange', 
+      pricePerHour: '', 
+      kmLimit: '', 
+      locationId: '', 
+      image: '',
+      images: ['', '', ''],
+      weekdayRate: '',
+      weekendRate: '',
+      excessKmCharge: '',
+      kmLimitPerHour: '',
+      minBookingHours: '',
+      gstPercentage: '18'
+    });
+
+  const BikeImagePreview = ({ url, label }: { url: string; label: string }) => {
+    const [hasError, setHasError] = useState(false);
+    useEffect(() => { setHasError(false); }, [url]);
+
+    if (!url) return null;
+
+    return (
+      <div className="relative group cursor-pointer w-24 h-24 flex-shrink-0" onClick={() => { setPreviewImageUrl(url); setIsPreviewModalOpen(true); }}>
+        <img
+          src={url}
+          alt={label}
+          className={`w-full h-full object-contain rounded-lg border bg-muted/30 transition-all group-hover:brightness-90 ${hasError ? 'opacity-50' : ''}`}
+          onError={() => setHasError(true)}
+        />
+        {hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded-lg">
+            <span className="text-[10px] text-destructive font-medium text-center px-1">Failed to load</span>
+          </div>
+        )}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+           <div className="bg-black/40 text-white p-1 rounded-full backdrop-blur-sm">
+             <Maximize2 className="h-4 w-4" />
+           </div>
+        </div>
+      </div>
+    );
+  };
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any | null>(null);
   const [locationForm, setLocationForm] = useState<any>({ name: '', city: '', state: '', country: '' });
@@ -1755,46 +1792,58 @@ export default function SuperAdmin() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="space-y-2">
-              <Input placeholder="Main Image URL" value={bikeForm.image} onChange={(e) => setBikeForm({ ...bikeForm, image: e.target.value })} />
-              <div className="flex items-center gap-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
-                      if (res?.fileUrl) {
-                        setBikeForm({ ...bikeForm, image: res.fileUrl });
-                        toast({ title: 'Image uploaded', description: 'Bike image has been uploaded' });
-                      } else {
-                        toast({ title: 'Upload failed', description: 'No file URL returned', variant: 'destructive' });
-                      }
-                    } catch (err: any) {
-                      toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
-                    }
-                  }}
-                />
-                {bikeForm.image && (
-                  <img src={bikeForm.image} alt="Preview" className="w-16 h-16 object-cover rounded-md border" />
-                )}
+            <div className="space-y-3 border-t pt-4">
+              <Label className="text-sm font-medium">Main Vehicle Image</Label>
+              <div className="flex gap-4 items-start">
+                <BikeImagePreview url={bikeForm.image} label="Main vehicle preview" />
+                <div className="flex-1 space-y-2">
+                  <Input 
+                    placeholder="Enter Image URL" 
+                    value={bikeForm.image} 
+                    onChange={(e) => setBikeForm({ ...bikeForm, image: e.target.value })} 
+                  />
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="cursor-pointer"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
+                          if (res?.fileUrl) {
+                            setBikeForm({ ...bikeForm, image: res.fileUrl });
+                            toast({ title: 'Image uploaded', description: 'Bike image has been uploaded' });
+                          } else {
+                            toast({ title: 'Upload failed', description: 'No file URL returned', variant: 'destructive' });
+                          }
+                        } catch (err: any) {
+                          toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
+                        }
+                      }}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                      <Download className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Tip: Click image to see larger preview</p>
+                </div>
               </div>
             </div>
 
             {/* Additional Images */}
-            <div className="space-y-2 border-t pt-2 mt-2">
+            <div className="space-y-4 border-t pt-4">
               <Label className="text-sm font-medium">Additional Images (Optional)</Label>
               {bikeForm.images && bikeForm.images.map((img: string, index: number) => (
-                <div key={index} className="space-y-2 p-2 border rounded-md bg-muted/20">
+                <div key={index} className="space-y-3 p-3 border rounded-xl bg-muted/20 relative">
                    <div className="flex items-center justify-between">
-                     <Label className="text-xs text-muted-foreground">Image {index + 1}</Label>
+                     <Label className="text-xs font-semibold">Image Slot {index + 1}</Label>
                      {img && (
                        <Button 
                          variant="ghost" 
                          size="sm" 
-                         className="h-6 w-6 p-0 text-destructive" 
+                         className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10" 
                          onClick={() => {
                            const newImages = [...bikeForm.images];
                            newImages[index] = '';
@@ -1805,38 +1854,44 @@ export default function SuperAdmin() {
                        </Button>
                      )}
                    </div>
-                   <Input 
-                      placeholder={`Image URL ${index + 1}`} 
-                      value={img} 
-                      onChange={(e) => {
-                        const newImages = [...bikeForm.images];
-                        newImages[index] = e.target.value;
-                        setBikeForm({ ...bikeForm, images: newImages });
-                      }} 
-                   />
-                   <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        try {
-                          const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
-                          if (res?.fileUrl) {
-                            const newImages = [...bikeForm.images];
-                            newImages[index] = res.fileUrl;
-                            setBikeForm({ ...bikeForm, images: newImages });
-                            toast({ title: 'Image uploaded', description: `Image ${index + 1} has been uploaded` });
-                          }
-                        } catch (err: any) {
-                          toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
-                        }
-                      }}
-                    />
-                    {img && (
-                      <img src={img} alt={`Preview ${index + 1}`} className="w-16 h-16 object-cover rounded-md border" />
-                    )}
+                   <div className="flex gap-4 items-start">
+                    <BikeImagePreview url={img} label={`Additional preview ${index + 1}`} />
+                    <div className="flex-1 space-y-2">
+                      <Input 
+                        placeholder={`Image URL ${index + 1}`} 
+                        value={img} 
+                        onChange={(e) => {
+                          const newImages = [...bikeForm.images];
+                          newImages[index] = e.target.value;
+                          setBikeForm({ ...bikeForm, images: newImages });
+                        }} 
+                      />
+                      <div className="relative">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          className="cursor-pointer h-9 text-xs"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
+                              if (res?.fileUrl) {
+                                const newImages = [...bikeForm.images];
+                                newImages[index] = res.fileUrl;
+                                setBikeForm({ ...bikeForm, images: newImages });
+                                toast({ title: 'Image uploaded', description: `Image ${index + 1} has been uploaded` });
+                              }
+                            } catch (err: any) {
+                              toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
+                            }
+                          }}
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                          <Download className="h-3.5 w-3.5" />
+                        </div>
+                      </div>
+                    </div>
                    </div>
                 </div>
               ))}
@@ -2106,6 +2161,97 @@ export default function SuperAdmin() {
                   </Button>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPreviewModalOpen} onOpenChange={(open) => {
+        setIsPreviewModalOpen(open);
+        if (!open) setZoomScale(1);
+      }}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[85vh] p-0 overflow-hidden bg-black/95 border-none shadow-2xl flex flex-col">
+          <div className="relative flex-1 w-full h-full overflow-auto custom-scrollbar flex items-center justify-center p-4 sm:p-8">
+            {previewImageUrl && (
+              <div 
+                className="relative transition-all duration-300 ease-in-out flex items-center justify-center min-w-full min-h-full"
+                style={{ 
+                  transform: `scale(${zoomScale})`,
+                  transformOrigin: 'center center'
+                }}
+              >
+                <img 
+                  src={previewImageUrl} 
+                  alt="Large Preview" 
+                  className="max-w-full max-h-full object-contain shadow-2xl animate-in fade-in zoom-in duration-300"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Image+Load+Error';
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Floating Zoom Controls - Bottom Center */}
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9 text-white hover:bg-white/20 rounded-xl"
+                onClick={() => setZoomScale(prev => Math.max(prev - 0.25, 0.5))}
+                title="Zoom Out"
+              >
+                <ZoomOut className="h-5 w-5" />
+              </Button>
+              <div className="px-3 min-w-[60px] text-center border-x border-white/10">
+                <span className="text-xs font-bold text-white tracking-tight">{Math.round(zoomScale * 100)}%</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9 text-white hover:bg-white/20 rounded-xl"
+                onClick={() => setZoomScale(prev => Math.min(prev + 0.25, 4))}
+                title="Zoom In"
+              >
+                <ZoomIn className="h-5 w-5" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="ml-1 h-9 w-9 text-white/60 hover:text-white hover:bg-white/20 rounded-xl"
+                onClick={() => setZoomScale(1)}
+                title="Reset Zoom"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-md z-50 h-10 w-10 border border-white/10"
+              onClick={() => setIsPreviewModalOpen(false)}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+          </div>
+          
+          {previewImageUrl && (
+            <div className="p-4 bg-black/40 backdrop-blur-md border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4 z-50">
+              <div className="flex flex-col max-w-full sm:max-w-[70%]">
+                <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Image Source</p>
+                <p className="text-xs font-medium truncate text-white/70">{previewImageUrl}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-white/5 text-white border-white/10 hover:bg-white/10 h-9 px-4 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
+                  onClick={() => window.open(previewImageUrl, '_blank')}
+                >
+                  <Maximize2 className="h-3.5 w-3.5 mr-2" />
+                  Open Original
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
