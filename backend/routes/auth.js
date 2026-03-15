@@ -292,23 +292,39 @@ router.post('/forgot-password', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.json({ message: 'If a user with this email exists, a password reset link has been sent.' });
+      return res.json({ message: 'If a user with this email exists, an OTP has been sent.' });
     }
 
-    // Generate token
-    const token = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    // Generate 6-digit OTP
+    const otp = generateOTP();
+    user.resetPasswordOTP = otp;
+    user.resetPasswordOTPExpires = Date.now() + 600000; // 10 minutes
 
     await user.save();
 
-    // Log token for dev testing
-    console.log('==========================================');
-    console.log(`PASSWORD RESET REQUEST FOR: ${email}`);
-    console.log(`TOKEN: ${token}`);
-    console.log('==========================================');
+    // Send OTP via email
+    try {
+      const { sendEmail } = await import('../utils/email.js');
+      await sendEmail({
+        to: email,
+        subject: 'RideFlow Password Reset OTP',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>Password Reset Request</h2>
+            <p>Your OTP for password reset is:</p>
+            <h1 style="color: #ff6600; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+            <p>This code will expire in 10 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+          </div>
+        `,
+      });
+      console.log(`OTP sent to ${email}: ${otp}`);
+    } catch (emailError) {
+      console.error('Error sending OTP email:', emailError);
+      // Even if email fails, we don't want to expose if user exists
+    }
 
-    res.json({ message: 'If a user with this email exists, a password reset link has been sent.', devToken: token });
+    res.json({ message: 'If a user with this email exists, an OTP has been sent.' });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Error processing request' });
@@ -318,24 +334,25 @@ router.post('/forgot-password', async (req, res) => {
 // Reset Password
 router.post('/reset-password', async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { email, otp, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-      return res.status(400).json({ message: 'Token and new password are required' });
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: 'Email, OTP, and new password are required' });
     }
 
     const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }
+      email,
+      resetPasswordOTP: otp,
+      resetPasswordOTPExpires: { $gt: Date.now() }
     });
 
     if (!user) {
-      return res.status(400).json({ message: 'Password reset token is invalid or has expired' });
+      return res.status(400).json({ message: 'Invalid OTP or OTP has expired' });
     }
 
     user.password = newPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordOTPExpires = undefined;
 
     await user.save();
 
