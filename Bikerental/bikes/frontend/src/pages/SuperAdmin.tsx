@@ -227,7 +227,7 @@ export default function SuperAdmin() {
         bikesAPI.getAll(),
         usersAPI.getAll(),
         documentsAPI.getAll(),
-        locationsAPI.getAll(),
+        locationsAPI.getAll(true),
         rentalsAPI.getAll(),
         settingsAPI.getHomeHero(),
       ]);
@@ -658,6 +658,20 @@ export default function SuperAdmin() {
                 </Badge>
               )}
             </div>
+
+            {activeTab === 'locations' && (
+              <Button 
+                onClick={() => {
+                  setEditingLocation(null);
+                  setLocationForm({ name: '', city: '', state: '', country: 'India' });
+                  setLocationDialogOpen(true);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Location
+              </Button>
+            )}
           </div>
         )}
 
@@ -1730,12 +1744,14 @@ export default function SuperAdmin() {
                         variant="destructive"
                         className="w-full sm:w-auto"
                         onClick={async () => {
-                          try {
-                            await locationsAPI.delete(loc.id);
-                            toast({ title: 'Location deleted' });
-                            loadData();
-                          } catch (e: any) {
-                            toast({ title: 'Error', description: e.message || 'Failed to delete location', variant: 'destructive' });
+                          if (window.confirm(`Are you sure you want to delete "${formatLocationDisplay(loc)}"?`)) {
+                            try {
+                              await locationsAPI.delete(loc.id);
+                              toast({ title: 'Location deleted' });
+                              loadData();
+                            } catch (e: any) {
+                              toast({ title: 'Error', description: e.message || 'Failed to delete location', variant: 'destructive' });
+                            }
                           }
                         }}
                       >
@@ -1750,18 +1766,43 @@ export default function SuperAdmin() {
             <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Edit Location</DialogTitle>
-                  <DialogDescription>Update location details</DialogDescription>
+                  <DialogTitle>{editingLocation ? 'Edit Location' : 'Add Location'}</DialogTitle>
+                  <DialogDescription>{editingLocation ? 'Update location details' : 'Enter new location details'}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
-                  <Input placeholder="City" value={locationForm.city} onChange={(e) => setLocationForm({ ...locationForm, city: e.target.value })} />
-                  <div className="flex gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Location Name (e.g. Ameerpet)</Label>
+                    <Input placeholder="Location Name" value={locationForm.name} onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">City</Label>
+                    <Input placeholder="City" value={locationForm.city} onChange={(e) => setLocationForm({ ...locationForm, city: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">State</Label>
+                    <Input placeholder="State" value={locationForm.state} onChange={(e) => setLocationForm({ ...locationForm, state: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 pt-4">
                     <Button
+                      className="flex-1"
                       onClick={async () => {
+                        if (!locationForm.name || !locationForm.city || !locationForm.state) {
+                          toast({ title: 'Error', description: 'All fields are mandatory', variant: 'destructive' });
+                          return;
+                        }
                         try {
                           if (editingLocation) {
                             await locationsAPI.update(editingLocation.id, locationForm);
                             toast({ title: 'Location updated' });
+                          } else {
+                            // Frontend check for duplicates (backend also checks)
+                            const exists = locations.some(l => l.name.toLowerCase() === locationForm.name.toLowerCase());
+                            if (exists) {
+                              toast({ title: 'Error', description: 'Location with this name already exists', variant: 'destructive' });
+                              return;
+                            }
+                            await locationsAPI.create(locationForm);
+                            toast({ title: 'Location created' });
                           }
                           setLocationDialogOpen(false);
                           setEditingLocation(null);
@@ -1771,9 +1812,9 @@ export default function SuperAdmin() {
                         }
                       }}
                     >
-                      Save
+                      {editingLocation ? 'Save Changes' : 'Add Location'}
                     </Button>
-                    <Button variant="outline" onClick={() => setLocationDialogOpen(false)}>Cancel</Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setLocationDialogOpen(false)}>Cancel</Button>
                   </div>
                 </div>
               </DialogContent>

@@ -155,7 +155,7 @@ export const BikeCard = memo(({ bike, onRent, variant = 'grid', pickupDateTime, 
           </div>
         </div>
         <div className="p-4 space-y-3">
-          <h3 className="font-display font-bold text-base">{bike.name}</h3>
+          <h3 className="font-display font-bold text-base whitespace-normal">{bike.name}</h3>
           {(bike.brand || bike.year) && (
             <p className="text-xs text-muted-foreground -mt-1 mb-2">
               {[bike.brand, bike.year].filter(Boolean).join(' • ')}

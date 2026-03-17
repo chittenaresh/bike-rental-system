@@ -62,6 +62,19 @@ const statusStyles = {
   rejected: { color: 'bg-destructive/10 text-destructive', icon: XCircle },
 };
 
+const PREDEFINED_BIKE_SPECS = [
+  { brand: 'Honda', models: ['Activa 6G', 'Activa 125', 'Dio', 'Shine', 'Unicorn', 'Hornet 2.0', 'Hness CB350', 'CB350RS'] },
+  { brand: 'TVS', models: ['Jupiter', 'iQube', 'Ntorq 125', 'Apache RTR 160', 'Apache RTR 200', 'Raider', 'XL100', 'Ronin'] },
+  { brand: 'Suzuki', models: ['Access 125', 'Burgman Street', 'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'V-Strom SX'] },
+  { brand: 'Yamaha', models: ['Ray ZR 125', 'Fascino 125', 'FZ-S FI', 'MT-15 V2', 'R15 V4', 'Aerox 155', 'FZX'] },
+  { brand: 'Hero', models: ['Splendor Plus', 'HF Deluxe', 'Passion XTEC', 'Glamour', 'Xpulse 200 4V', 'Destini 125', 'Pleasure Plus', 'Vida V1'] },
+  { brand: 'Royal Enfield', models: ['Classic 350', 'Bullet 350', 'Meteor 350', 'Hunter 350', 'Himalayan 450', 'Continental GT 650', 'Interceptor 650'] },
+  { brand: 'Bajaj', models: ['Pulsar 125', 'Pulsar 150', 'Pulsar NS200', 'Dominar 400', 'Chetak', 'Platina', 'Avenger Cruise 220'] },
+  { brand: 'KTM', models: ['Duke 200', 'Duke 250', 'Duke 390', 'RC 200', 'RC 390', 'Adventure 390'] },
+  { brand: 'Ola', models: ['S1 Pro', 'S1 Air', 'S1 X'] },
+  { brand: 'Ather', models: ['450X', '450S', 'Rizta'] },
+];
+
 const superAdminTabIds = [
   'dashboard',
   'models',
@@ -90,6 +103,7 @@ export default function SuperAdmin() {
     superAdminTabIds.includes(initialTabParam as any) ? initialTabParam : 'dashboard'
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const [bookingSearchQuery, setBookingSearchQuery] = useState('');
   const [documentsSearchQuery, setDocumentsSearchQuery] = useState('');
   const [bikes, setBikes] = useState<BikeType[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -119,27 +133,28 @@ export default function SuperAdmin() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
     const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
     const [zoomScale, setZoomScale] = useState(1);
-    const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
-    const [rejectionReason, setRejectionReason] = useState('');
-    const [docToReject, setDocToReject] = useState<string | null>(null);
-    const [bikeForm, setBikeForm] = useState<any>({ 
-      name: '', 
-      brand: '', 
-      year: '', 
-      type: 'fuel', 
-      category: 'midrange', 
-      pricePerHour: '', 
-      kmLimit: '', 
-      locationId: '', 
-      image: '',
-      images: ['', '', ''],
-      weekdayRate: '',
-      weekendRate: '',
-      excessKmCharge: '',
-      kmLimitPerHour: '',
-      minBookingHours: '',
-      gstPercentage: '18'
-    });
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [docToReject, setDocToReject] = useState<string | null>(null);
+  const [bikeSpecs, setBikeSpecs] = useState<any[]>(PREDEFINED_BIKE_SPECS);
+  const [bikeForm, setBikeForm] = useState<any>({ 
+    name: '', 
+    brand: '', 
+    year: '', 
+    type: 'fuel', 
+    category: 'midrange', 
+    pricePerHour: '', 
+    kmLimit: '', 
+    locationId: '', 
+    image: '',
+    images: ['', '', ''],
+    weekdayRate: '',
+    weekendRate: '',
+    excessKmCharge: '',
+    kmLimitPerHour: '',
+    minBookingHours: '',
+    gstPercentage: '18'
+  });
 
   const BikeImagePreview = ({ url, label }: { url: string; label: string }) => {
     const [hasError, setHasError] = useState(false);
@@ -264,14 +279,32 @@ export default function SuperAdmin() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [bikesData, usersData, docsData, locationsData, rentalsData, settingsData] = await Promise.all([
+      const [bikesData, usersData, docsData, locationsData, rentalsData, settingsData, specsData] = await Promise.all([
         bikesAPI.getAll(),
         usersAPI.getAll(),
         documentsAPI.getAll(),
-        locationsAPI.getAll(),
+        locationsAPI.getAll(true),
         rentalsAPI.getAll(),
         settingsAPI.getHomeHero(),
+        bikesAPI.getSpecs().catch(() => []),
       ]);
+
+      if (specsData) {
+        const mergedSpecs = [...PREDEFINED_BIKE_SPECS];
+        specsData.forEach((dbSpec: any) => {
+          const existing = mergedSpecs.find(s => s.brand.toLowerCase() === dbSpec.brand.toLowerCase());
+          if (existing) {
+            dbSpec.models.forEach((m: string) => {
+              if (!existing.models.some(em => em.toLowerCase() === m.toLowerCase())) {
+                existing.models.push(m);
+              }
+            });
+          } else {
+            mergedSpecs.push(dbSpec);
+          }
+        });
+        setBikeSpecs(mergedSpecs);
+      }
 
       if (settingsData && settingsData.imageUrl) {
         setHomeHeroImageUrl(settingsData.imageUrl);
@@ -736,6 +769,20 @@ export default function SuperAdmin() {
                 </Badge>
               )}
             </div>
+
+            {activeTab === 'locations' && (
+              <Button 
+                onClick={() => {
+                  setEditingLocation(null);
+                  setLocationForm({ name: '', city: '', state: '', country: 'India' });
+                  setLocationDialogOpen(true);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Location
+              </Button>
+            )}
           </div>
         )}
 
@@ -793,6 +840,7 @@ export default function SuperAdmin() {
                   setBikeForm({ 
                     name: '', 
                     brand: '', 
+                    year: '',
                     type: 'fuel', 
                     category: 'midrange', 
                     pricePerHour: '', 
@@ -870,7 +918,7 @@ export default function SuperAdmin() {
                       </div>
                     )}
                     <div className="flex-1 flex flex-col min-w-0">
-                      <p className="font-medium mb-1 truncate">{bike.name}</p>
+                      <p className="font-medium mb-1 whitespace-normal">{bike.name}</p>
                       {(bike.brand || bike.year) && (
                         <p className="text-xs text-muted-foreground mb-2 truncate">
                           {[bike.brand ? `Brand: ${bike.brand}` : '', bike.year ? `Year: ${bike.year}` : ''].filter(Boolean).join(' • ')}
@@ -1378,12 +1426,41 @@ export default function SuperAdmin() {
           </div>
         )}
 
-        {activeTab === 'bookings' && (
+        {activeTab === 'bookings' && (() => {
+          const filteredRentalsList = bookingSearchQuery.trim() === ''
+            ? filteredRentals
+            : filteredRentals.filter((r) => {
+                const bike = filteredBikes.find((b) => b.id === r.bikeId) || bikes.find((b) => b.id === r.bikeId);
+                const user = filteredUsers.find((u) => u.id === r.userId) || users.find((u) => u.id === r.userId);
+                const searchLower = bookingSearchQuery.toLowerCase();
+                const searchId = searchLower.startsWith('#') ? searchLower.slice(1) : searchLower;
+                
+                return (
+                  r.id.toLowerCase().includes(searchId) ||
+                  (bike?.name || '').toLowerCase().includes(searchLower) ||
+                  (user?.name || '').toLowerCase().includes(searchLower) ||
+                  (user?.email || '').toLowerCase().includes(searchLower) ||
+                  r.status.toLowerCase().includes(searchLower)
+                );
+              });
+
+          return (
           <div className="space-y-6">
             <div>
               <h1 className="text-2xl font-display font-bold mb-2">All Bookings</h1>
               <p className="text-muted-foreground">Oversight across all cities.</p>
             </div>
+            
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                placeholder="Search bookings..."
+                className="pl-10"
+                value={bookingSearchQuery}
+                onChange={(e) => setBookingSearchQuery(e.target.value)}
+              />
+            </div>
+
             <div className="bg-card rounded-2xl shadow-card overflow-hidden">
               <div className="w-full overflow-x-auto">
                 <table className="w-full min-w-[900px]">
@@ -1399,22 +1476,26 @@ export default function SuperAdmin() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {filteredRentals.length === 0 ? (
+                    {filteredRentalsList.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center justify-center">
                             <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                            <p className="text-lg font-medium text-muted-foreground mb-2">No bookings found</p>
+                            <p className="text-lg font-medium text-muted-foreground mb-2">
+                              {bookingSearchQuery.trim() ? 'No bookings match your search' : 'No bookings found'}
+                            </p>
                             <p className="text-sm text-muted-foreground">
-                              {selectedLocationFilter === 'all' 
-                                ? 'There are no bookings yet.' 
-                                : `There are no bookings for ${formatLocationDisplay(locations.find(loc => loc.id === selectedLocationFilter)) || 'this location'} yet.`}
+                              {bookingSearchQuery.trim() 
+                                ? 'Try adjusting your search terms.' 
+                                : selectedLocationFilter === 'all' 
+                                  ? 'There are no bookings yet.' 
+                                  : `There are no bookings for ${formatLocationDisplay(locations.find(loc => loc.id === selectedLocationFilter)) || 'this location'} yet.`}
                             </p>
                           </div>
                         </td>
                       </tr>
                     ) : (
-                      filteredRentals.map((r) => {
+                      filteredRentalsList.map((r) => {
                         const bike = filteredBikes.find((b) => b.id === r.bikeId) || bikes.find((b) => b.id === r.bikeId);
                         const user = filteredUsers.find((u) => u.id === r.userId) || users.find((u) => u.id === r.userId);
                       return (
@@ -1448,7 +1529,7 @@ export default function SuperAdmin() {
               </div>
             </div>
           </div>
-        )}
+        )})}
 
         {/* Reuse Admin tabs for bikes/users/documents/locations */}
 
@@ -1803,12 +1884,14 @@ export default function SuperAdmin() {
                         variant="destructive"
                         className="w-full sm:w-auto"
                         onClick={async () => {
-                          try {
-                            await locationsAPI.delete(loc.id);
-                            toast({ title: 'Location deleted' });
-                            loadData();
-                          } catch (e: any) {
-                            toast({ title: 'Error', description: e.message || 'Failed to delete location', variant: 'destructive' });
+                          if (window.confirm(`Are you sure you want to delete "${formatLocationDisplay(loc)}"?`)) {
+                            try {
+                              await locationsAPI.delete(loc.id);
+                              toast({ title: 'Location deleted' });
+                              loadData();
+                            } catch (e: any) {
+                              toast({ title: 'Error', description: e.message || 'Failed to delete location', variant: 'destructive' });
+                            }
                           }
                         }}
                       >
@@ -1823,18 +1906,43 @@ export default function SuperAdmin() {
             <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Edit Location</DialogTitle>
-                  <DialogDescription>Update location details</DialogDescription>
+                  <DialogTitle>{editingLocation ? 'Edit Location' : 'Add Location'}</DialogTitle>
+                  <DialogDescription>{editingLocation ? 'Update location details' : 'Enter new location details'}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
-                  <Input placeholder="City" value={locationForm.city} onChange={(e) => setLocationForm({ ...locationForm, city: e.target.value })} />
-                  <div className="flex gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Location Name (e.g. Ameerpet)</Label>
+                    <Input placeholder="Location Name" value={locationForm.name} onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">City</Label>
+                    <Input placeholder="City" value={locationForm.city} onChange={(e) => setLocationForm({ ...locationForm, city: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">State</Label>
+                    <Input placeholder="State" value={locationForm.state} onChange={(e) => setLocationForm({ ...locationForm, state: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 pt-4">
                     <Button
+                      className="flex-1"
                       onClick={async () => {
+                        if (!locationForm.name || !locationForm.city || !locationForm.state) {
+                          toast({ title: 'Error', description: 'All fields are mandatory', variant: 'destructive' });
+                          return;
+                        }
                         try {
                           if (editingLocation) {
                             await locationsAPI.update(editingLocation.id, locationForm);
                             toast({ title: 'Location updated' });
+                          } else {
+                            // Frontend check for duplicates (backend also checks)
+                            const exists = locations.some(l => l.name.toLowerCase() === locationForm.name.toLowerCase());
+                            if (exists) {
+                              toast({ title: 'Error', description: 'Location with this name already exists', variant: 'destructive' });
+                              return;
+                            }
+                            await locationsAPI.create(locationForm);
+                            toast({ title: 'Location created' });
                           }
                           setLocationDialogOpen(false);
                           setEditingLocation(null);
@@ -1844,9 +1952,9 @@ export default function SuperAdmin() {
                         }
                       }}
                     >
-                      Save
+                      {editingLocation ? 'Save Changes' : 'Add Location'}
                     </Button>
-                    <Button variant="outline" onClick={() => setLocationDialogOpen(false)}>Cancel</Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setLocationDialogOpen(false)}>Cancel</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -1862,11 +1970,57 @@ export default function SuperAdmin() {
             <DialogTitle>{editingBike ? 'Edit Bike' : 'Add Bike'}</DialogTitle>
             <DialogDescription>Enter bike details</DialogDescription>
           </DialogHeader>
-                <div className="space-y-3">
-                  <Input placeholder="Name" value={bikeForm.name} onChange={(e) => setBikeForm({ ...bikeForm, name: e.target.value })} />
-                  <Input placeholder="Brand" value={bikeForm.brand || ''} onChange={(e) => setBikeForm({ ...bikeForm, brand: e.target.value })} />
-                  <Input placeholder="Year" type="number" value={bikeForm.year} onChange={(e) => setBikeForm({ ...bikeForm, year: e.target.value })} onWheel={(e) => (e.target as HTMLInputElement).blur()} />
-                  <Select value={bikeForm.type} onValueChange={(v) => setBikeForm({ ...bikeForm, type: v })}>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Brand</Label>
+                <Select 
+                  value={bikeForm.brand} 
+                  onValueChange={(v) => {
+                    setBikeForm({ ...bikeForm, brand: v, name: '' });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
+                  <SelectContent>
+                    {bikeSpecs.map((spec) => (
+                      <SelectItem key={spec.brand} value={spec.brand}>{spec.brand}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Name</Label>
+                <Select 
+                  value={bikeForm.name} 
+                  onValueChange={(v) => setBikeForm({ ...bikeForm, name: v })}
+                  disabled={!bikeForm.brand}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select Vehicle" /></SelectTrigger>
+                  <SelectContent>
+                    {(bikeSpecs.find(s => s.brand === bikeForm.brand)?.models || []).map((model: string) => (
+                      <SelectItem key={model} value={model}>{model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Year</Label>
+              <Select 
+                value={bikeForm.year} 
+                onValueChange={(v) => setBikeForm({ ...bikeForm, year: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: new Date().getFullYear() - 2000 + 1 }, (_, i) => 2000 + i)
+                    .reverse()
+                    .map((year) => (
+                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Select value={bikeForm.type} onValueChange={(v) => setBikeForm({ ...bikeForm, type: v })}>
                     <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fuel">Fuel</SelectItem>

@@ -69,6 +69,21 @@ router.get('/available', async (req, res) => {
   }
 });
 
+// Get unique brands and models
+router.get('/specs', async (req, res) => {
+  try {
+    const specs = await Bike.aggregate([
+      { $group: { _id: '$brand', models: { $addToSet: '$name' } } },
+      { $project: { brand: '$_id', models: 1, _id: 0 } },
+      { $sort: { brand: 1 } }
+    ]);
+    res.json(specs);
+  } catch (error) {
+    logErrorIfNotConnection('Get bike specs error', error);
+    res.status(500).json({ message: 'Error fetching bike specs. Please try again later.' });
+  }
+});
+
 // Get bike by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -133,6 +148,21 @@ router.post('/', authenticateToken, async (req, res) => {
 
     if (!name || !type || !locationId) {
       return res.status(400).json({ message: 'Required fields missing: name, type, locationId' });
+    }
+
+    // Validate Brand
+    if (!brand || typeof brand !== 'string' || brand.trim() === '') {
+      return res.status(400).json({ message: 'Brand is required and must be a valid string' });
+    }
+
+    // Validate Year
+    const currentYear = new Date().getFullYear();
+    const minYear = 2000;
+    if (year) {
+      const yearInt = parseInt(year);
+      if (isNaN(yearInt) || yearInt < minYear || yearInt > currentYear) {
+        return res.status(400).json({ message: `Year must be between ${minYear} and ${currentYear}` });
+      }
     }
 
     // Validate that some pricing configuration is provided

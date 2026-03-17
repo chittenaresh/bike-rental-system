@@ -9,7 +9,22 @@ const router = express.Router();
 // Get all locations (public)
 router.get('/', async (req, res) => {
   try {
-    const locations = await Location.find({ isActive: true }).sort({ name: 1 });
+    const { all } = req.query;
+    let locations;
+
+    if (all === 'true') {
+      // Return all active locations (e.g., for Super Admin)
+      locations = await Location.find({ isActive: true }).sort({ name: 1 });
+    } else {
+      // Only return locations that have at least one admin associated with them (for general users)
+      const adminLocationIds = await User.find({ role: 'admin' }).distinct('locationId');
+      
+      locations = await Location.find({ 
+        isActive: true,
+        _id: { $in: adminLocationIds }
+      }).sort({ name: 1 });
+    }
+
     const transformedLocations = locations.map(loc => ({
       id: loc._id.toString(),
       name: loc.name,
@@ -93,7 +108,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     const location = await Location.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      {
+        name: req.body.name,
+        city: req.body.city,
+        state: req.body.state,
+        country: req.body.country,
+        isActive: req.body.isActive
+      },
       { new: true, runValidators: true }
     );
 

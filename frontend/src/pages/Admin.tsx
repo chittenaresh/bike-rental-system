@@ -83,6 +83,19 @@ const toLocalISOString = (date: Date) => {
 };
 
 
+const PREDEFINED_BIKE_SPECS = [
+  { brand: 'Honda', models: ['Activa 6G', 'Activa 125', 'Dio', 'Shine', 'Unicorn', 'Hornet 2.0', 'Hness CB350', 'CB350RS'] },
+  { brand: 'TVS', models: ['Jupiter', 'iQube', 'Ntorq 125', 'Apache RTR 160', 'Apache RTR 200', 'Raider', 'XL100', 'Ronin'] },
+  { brand: 'Suzuki', models: ['Access 125', 'Burgman Street', 'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'V-Strom SX'] },
+  { brand: 'Yamaha', models: ['Ray ZR 125', 'Fascino 125', 'FZ-S FI', 'MT-15 V2', 'R15 V4', 'Aerox 155', 'FZX'] },
+  { brand: 'Hero', models: ['Splendor Plus', 'HF Deluxe', 'Passion XTEC', 'Glamour', 'Xpulse 200 4V', 'Destini 125', 'Pleasure Plus', 'Vida V1'] },
+  { brand: 'Royal Enfield', models: ['Classic 350', 'Bullet 350', 'Meteor 350', 'Hunter 350', 'Himalayan 450', 'Continental GT 650', 'Interceptor 650'] },
+  { brand: 'Bajaj', models: ['Pulsar 125', 'Pulsar 150', 'Pulsar NS200', 'Dominar 400', 'Chetak', 'Platina', 'Avenger Cruise 220'] },
+  { brand: 'KTM', models: ['Duke 200', 'Duke 250', 'Duke 390', 'RC 200', 'RC 390', 'Adventure 390'] },
+  { brand: 'Ola', models: ['S1 Pro', 'S1 Air', 'S1 X'] },
+  { brand: 'Ather', models: ['450X', '450S', 'Rizta'] },
+];
+
 export default function Admin() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -174,6 +187,7 @@ export default function Admin() {
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [docToReject, setDocToReject] = useState<string | null>(null);
+  const [bikeSpecs, setBikeSpecs] = useState<any[]>(PREDEFINED_BIKE_SPECS);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -433,6 +447,27 @@ export default function Admin() {
         setDocuments(docsData);
       } catch {
         setDocuments([]);
+      }
+      // Fetch bike specs
+      try {
+        const specs = await bikesAPI.getSpecs();
+        // Merge predefined specs with database specs
+        const mergedSpecs = [...PREDEFINED_BIKE_SPECS];
+        specs.forEach((dbSpec: any) => {
+          const existing = mergedSpecs.find(s => s.brand.toLowerCase() === dbSpec.brand.toLowerCase());
+          if (existing) {
+            dbSpec.models.forEach((m: string) => {
+              if (!existing.models.some(em => em.toLowerCase() === m.toLowerCase())) {
+                existing.models.push(m);
+              }
+            });
+          } else {
+            mergedSpecs.push(dbSpec);
+          }
+        });
+        setBikeSpecs(mergedSpecs);
+      } catch {
+        setBikeSpecs(PREDEFINED_BIKE_SPECS);
       }
     } catch (error: any) {
       toast({
@@ -1197,7 +1232,7 @@ export default function Admin() {
                       </div>
                     )}
                     <div className="flex-1 flex flex-col min-w-0">
-                      <p className="font-medium mb-1 truncate">{bike.name}</p>
+                      <p className="font-medium mb-1 whitespace-normal">{bike.name}</p>
                       {(bike.brand || bike.year) && (
                         <p className="text-xs text-muted-foreground mb-2 truncate">
                           {[bike.brand ? `Brand: ${bike.brand}` : '', bike.year ? `Year: ${bike.year}` : ''].filter(Boolean).join(' • ')}
@@ -1274,9 +1309,11 @@ export default function Admin() {
                 const bike = bikesById[r.bikeId] || r.bike;
                 const user = users.find(u => u.id === r.userId) || r.user;
                 const searchLower = bookingSearchQuery.toLowerCase();
+                // Strip '#' from search query for ID matching
+                const searchId = searchLower.startsWith('#') ? searchLower.slice(1) : searchLower;
                 
                 return (
-                  r.id.toLowerCase().includes(searchLower) ||
+                  r.id.toLowerCase().includes(searchId) ||
                   (bike?.name || '').toLowerCase().includes(searchLower) ||
                   (user?.name || '').toLowerCase().includes(searchLower) ||
                   (user?.email || '').toLowerCase().includes(searchLower) ||
@@ -1775,9 +1812,55 @@ export default function Admin() {
             <DialogDescription>Enter vehicle details</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Input placeholder="Name" value={bikeForm.name} onChange={(e) => setBikeForm({ ...bikeForm, name: e.target.value })} />
-            <Input placeholder="Brand" value={bikeForm.brand || ''} onChange={(e) => setBikeForm({ ...bikeForm, brand: e.target.value })} />
-            <Input placeholder="Year" type="number" value={bikeForm.year} onChange={(e) => setBikeForm({ ...bikeForm, year: e.target.value })} onWheel={(e) => (e.target as HTMLInputElement).blur()} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Brand</Label>
+                <Select 
+                  value={bikeForm.brand} 
+                  onValueChange={(v) => {
+                    setBikeForm({ ...bikeForm, brand: v, name: '' });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
+                  <SelectContent>
+                    {bikeSpecs.map((spec) => (
+                      <SelectItem key={spec.brand} value={spec.brand}>{spec.brand}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Name</Label>
+                <Select 
+                  value={bikeForm.name} 
+                  onValueChange={(v) => setBikeForm({ ...bikeForm, name: v })}
+                  disabled={!bikeForm.brand}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select Vehicle" /></SelectTrigger>
+                  <SelectContent>
+                    {(bikeSpecs.find(s => s.brand === bikeForm.brand)?.models || []).map((model: string) => (
+                      <SelectItem key={model} value={model}>{model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Year</Label>
+              <Select 
+                value={bikeForm.year} 
+                onValueChange={(v) => setBikeForm({ ...bikeForm, year: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: new Date().getFullYear() - 2000 + 1 }, (_, i) => 2000 + i)
+                    .reverse()
+                    .map((year) => (
+                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Select value={bikeForm.type} onValueChange={(v) => setBikeForm({ ...bikeForm, type: v })}>
               <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
               <SelectContent>

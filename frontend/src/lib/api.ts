@@ -129,6 +129,7 @@ export const bikesAPI = {
     });
     return apiRequest<any[]>(`/bikes/available?${query.toString()}`);
   },
+  getSpecs: () => apiRequest<any[]>('/bikes/specs'),
   getById: (id: string) => apiRequest<any>(`/bikes/${id}?_t=${Date.now()}`),
   create: (data: any) => apiRequest<any>('/bikes', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: any) => apiRequest<any>(`/bikes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -209,7 +210,7 @@ export const paymentsAPI = {
 };
 
 export const locationsAPI = {
-  getAll: () => apiRequest<any[]>('/locations'),
+  getAll: (all: boolean = false) => apiRequest<any[]>(`/locations${all ? '?all=true' : ''}`),
   getById: (id: string) => apiRequest<any>(`/locations/${id}`),
   create: (location: any) => apiRequest<any>('/locations', { method: 'POST', body: JSON.stringify(location) }),
   update: (id: string, location: any) => apiRequest<any>(`/locations/${id}`, { method: 'PUT', body: JSON.stringify(location) }),
