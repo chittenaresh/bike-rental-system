@@ -12,15 +12,14 @@
     "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
     "skipLibCheck": true,
     "strict": false,
     "target": "ES2020",
-    "useDefineForClassFields": true,
-    "types": ["node", "react", "react-dom"],
-    "typeRoots": ["node_modules/@types"]
+    "useDefineForClassFields": true
   },
   "include": ["src"]
 }

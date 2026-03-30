@@ -3,28 +3,9 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { transformUser } from '../utils/transform.js';
 import crypto from 'crypto';
-
-export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+import { authenticateToken, JWT_SECRET } from '../middleware/auth.js';
 
 const router = express.Router();
-
-// Middleware to authenticate token
-export function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-}
 
 // Helper function to generate 6-digit OTP
 const generateOTP = () => {
@@ -33,7 +14,6 @@ const generateOTP = () => {
 
 // Send Email OTP
 router.post('/send-email-otp', authenticateToken, async (req, res) => {
-  console.log('POST /api/auth/send-email-otp hit');
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
@@ -71,14 +51,15 @@ router.post('/send-email-otp', authenticateToken, async (req, res) => {
       });
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
-      // We don't fail the request here, as the OTP is still logged to terminal for dev
+      // In development, we can still provide the OTP for convenience
     }
 
-    console.log('==========================================');
-    console.log(`EMAIL OTP FOR ${email}: ${otp}`);
-    console.log('==========================================');
+    const response = { message: 'OTP sent to email' };
+    if (process.env.NODE_ENV !== 'production') {
+      response.devOTP = otp;
+    }
 
-    res.json({ message: 'OTP sent to email', devOTP: otp });
+    res.json(response);
   } catch (error) {
     console.error('Send email OTP error:', error);
     res.status(500).json({ message: 'Error sending email OTP' });

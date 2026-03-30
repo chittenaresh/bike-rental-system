@@ -1,7 +1,7 @@
 import express from 'express';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { authenticateToken } from './auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import Rental from '../models/Rental.js';
 import Bike from '../models/Bike.js';
 import { transformRental } from '../utils/transform.js';

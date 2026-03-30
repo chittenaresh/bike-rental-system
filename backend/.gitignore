@@ -3,6 +3,9 @@ node_modules/
 data/*.json
 !data/.gitkeep
 .env.example
+*.log
+uploads/
+.DS_Store
 
 
 

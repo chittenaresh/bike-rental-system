@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from './auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Location from '../models/Location.js';
 import { createPresignedUpload } from '../utils/s3.js';

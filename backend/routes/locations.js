@@ -1,6 +1,6 @@
 import express from 'express';
 import Location from '../models/Location.js';
-import { authenticateToken } from './auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import User from '../models/User.js';
 import { logErrorIfNotConnection } from '../utils/errorHandler.js';
 

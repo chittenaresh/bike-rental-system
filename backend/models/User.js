@@ -11,17 +11,15 @@ const documentSchema = new mongoose.Schema({
 }, { _id: true });
 
 const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true, lowercase: true },
+  email: { type: String, required: true, lowercase: true },
   name: { type: String, required: true },
   password: { type: String, required: true },
   mobile: {
     type: String,
     default: '',
     trim: true,
-    unique: true,
-    sparse: true,
     validate: {
-      validator: (v) => v === '' || /^[6-9]\d{9}$/.test(v),
+      validator: (v) => v === '' || /^[6-9]\\d{9}$/.test(v),
       message: 'Invalid mobile number',
     },
   },
@@ -62,6 +60,12 @@ const userSchema = new mongoose.Schema({
   resetPasswordOTP: { type: String, default: null },
   resetPasswordOTPExpires: { type: Date, default: null }
 });
+
+// Add indexes for performance
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ mobile: 1 }, { unique: true, sparse: true });
+userSchema.index({ role: 1 });
+userSchema.index({ isVerified: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {

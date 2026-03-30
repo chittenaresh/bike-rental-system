@@ -1,7 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import { authenticateToken, JWT_SECRET } from './auth.js';
+import { authenticateToken, JWT_SECRET } from '../middleware/auth.js';
 import SupportTicket from '../models/SupportTicket.js';
 import User from '../models/User.js';
 import Rental from '../models/Rental.js';

@@ -53,5 +53,11 @@ const bikeSchema = new mongoose.Schema({
   gstPercentage: { type: Number, default: 18.0, min: 0, max: 100 },
 }, { timestamps: true });
 
+// Add indexes for performance
+bikeSchema.index({ locationId: 1 });
+bikeSchema.index({ status: 1 });
+bikeSchema.index({ type: 1 });
+bikeSchema.index({ category: 1 });
+
 export default mongoose.model('Bike', bikeSchema);
 

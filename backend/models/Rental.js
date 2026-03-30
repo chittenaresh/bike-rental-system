@@ -24,6 +24,12 @@ const rentalSchema = new mongoose.Schema({
   reminderSent: { type: Boolean, default: false }
 }, { timestamps: true });
 
+// Add indexes for performance
+rentalSchema.index({ userId: 1 });
+rentalSchema.index({ bikeId: 1 });
+rentalSchema.index({ status: 1 });
+rentalSchema.index({ startTime: -1 }); // Often queried for sorting
+
 export default mongoose.model('Rental', rentalSchema);
 
 

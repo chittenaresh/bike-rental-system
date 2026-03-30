@@ -1,6 +1,5 @@
 import { defineConfig, loadEnv, Plugin, LogLevel } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import eslint from 'vite-plugin-eslint';
 
 // Plugin to suppress proxy connection errors in development
 function suppressProxyErrors(): Plugin {
@@ -33,7 +32,7 @@ function suppressProxyErrors(): Plugin {
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }: { mode: string }) => {
   const env = loadEnv(mode, process.cwd());
-  const target = env.VITE_API_PROXY_TARGET || 'http://localhost:3000';
+  const target = env.VITE_API_PROXY_TARGET || 'http://localhost:3020';
   const isProduction = mode === 'production';
 
   return {
@@ -49,7 +48,7 @@ export default defineConfig(({ mode }: { mode: string }) => {
         },
       },
     },
-    plugins: [react(), suppressProxyErrors(), eslint()],
+    plugins: [react(), suppressProxyErrors()],
     resolve: {
       alias: {
         '@': '/src',

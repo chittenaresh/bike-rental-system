@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from './auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import HeroImage from '../models/HeroImage.js';
 import User from '../models/User.js';
 
