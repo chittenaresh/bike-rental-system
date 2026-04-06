@@ -41,8 +41,8 @@ router.post('/email-reply/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ message: 'Only admins can send email replies' });
     }
 
-    const recipientEmail = ticket.userId ? ticket.userId.email : ticket.guestEmail;
-    const recipientName = ticket.userId ? ticket.userId.name : ticket.guestName;
+    const recipientEmail = ticket.contactEmail || ticket.guestEmail || (ticket.userId ? ticket.userId.email : null);
+    const recipientName = ticket.contactName || ticket.guestName || (ticket.userId ? ticket.userId.name : 'User');
 
     if (!recipientEmail) {
       return res.status(400).json({ message: 'No email found for this ticket' });
@@ -326,15 +326,19 @@ router.post('/', async (req, res) => {
       userId: userId || undefined,
       rentalId: rentalId || undefined,
       locationId: finalLocationId || undefined,
-      guestName: userId ? undefined : guestName,
-      guestEmail: userId ? undefined : guestEmail,
+      guestName: guestName || undefined,
+      guestEmail: guestEmail || undefined,
+      contactName: guestName || undefined,
+      contactEmail: guestEmail || undefined,
       subject,
       category,
       priority: ['breakdown', 'accident'].includes(category) ? 'critical' : 'medium',
       messages: [{
         senderId: userId || undefined,
-        guestName: userId ? undefined : guestName,
-        guestEmail: userId ? undefined : guestEmail,
+        guestName: guestName || undefined,
+        guestEmail: guestEmail || undefined,
+        contactName: guestName || undefined,
+        contactEmail: guestEmail || undefined,
         senderRole: userRole,
         content: description,
         attachments: images || []

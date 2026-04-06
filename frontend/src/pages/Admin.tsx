@@ -943,14 +943,14 @@ export default function Admin() {
   }
 
   return (
-    <div className="h-screen bg-background flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <SEO
         title="Admin Dashboard"
         description="Manage bikes, users, and rentals on the RideFlow admin dashboard."
         noindex={true}
       />
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 bg-card border-r border-border p-4 flex-col h-full overflow-y-auto">
+      <aside className="hidden md:flex w-64 bg-card border-r border-border p-4 flex-col md:sticky md:top-0 md:h-screen overflow-y-auto">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-8 px-2">
           <div className="p-2 rounded-xl gradient-hero">

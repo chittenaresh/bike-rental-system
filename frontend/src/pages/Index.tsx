@@ -195,13 +195,13 @@ export default function Index() {
       />
       <Navbar />
       
-      <main>
+      <main className="overflow-x-hidden">
         {/* Hero Section */}
       <section 
         className={`relative pt-24 pb-16 md:pt-32 md:pb-24 ${
           !heroImages.length && homeHeroImageUrl
-            ? 'min-h-screen md:min-h-[80vh] bg-no-repeat bg-cover bg-center md:bg-cover md:bg-center md:bg-fixed'
-            : 'min-h-screen md:min-h-[80vh]'
+            ? 'min-h-[100dvh] md:min-h-[80vh] bg-no-repeat bg-cover bg-center md:bg-cover md:bg-center md:bg-fixed'
+            : 'min-h-[100dvh] md:min-h-[80vh]'
         }`}
         style={!heroImages.length && homeHeroImageUrl ? {
           backgroundImage: `url(${homeHeroImageUrl})`,

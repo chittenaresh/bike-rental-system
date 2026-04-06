@@ -212,9 +212,13 @@ if (JSON.stringify(rentals) !== JSON.stringify(rentalsData)) {
       return;
     }
     try {
-      await authAPI.sendMobileOTP(formData.mobile);
+      const response = await authAPI.sendMobileOTP(formData.mobile);
       setIsMobileVerifying(true);
-      toast({ title: "OTP Sent", description: "Verification code sent to your mobile number" });
+      toast({ 
+        title: "OTP Sent", 
+        description: response.message || "Verification code sent successfully",
+        variant: response.error ? "default" : "default" 
+      });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -412,7 +416,7 @@ if (JSON.stringify(rentals) !== JSON.stringify(rentalsData)) {
           <div className="grid lg:grid-cols-4 gap-6">
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-2xl shadow-card p-4 sticky top-24">
+              <div className="bg-card rounded-2xl shadow-card p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] overflow-y-auto">
                 <nav className="space-y-1">
                   {tabs.map((tab) => (
                     <button

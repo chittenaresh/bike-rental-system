@@ -117,6 +117,9 @@ router.post('/send-mobile-otp', authenticateToken, async (req, res) => {
     user.mobileOTPExpires = Date.now() + 600000; // 10 minutes
     await user.save();
 
+    let smsSent = false;
+    let smsErrorMessage = null;
+
     // Send actual SMS via Twilio
     try {
       const twilio = (await import('twilio')).default;
@@ -125,7 +128,13 @@ router.post('/send-mobile-otp', authenticateToken, async (req, res) => {
       // Ensure mobile number has country code for Twilio (assuming India +91 if not present)
       let formattedMobile = mobile.trim();
       if (!formattedMobile.startsWith('+')) {
-        formattedMobile = `+91${formattedMobile}`;
+        // If it's a 10-digit number, assume India (+91)
+        if (formattedMobile.length === 10) {
+          formattedMobile = `+91${formattedMobile}`;
+        } else {
+          // Otherwise, just add a + if it's missing (might be another country)
+          formattedMobile = `+${formattedMobile}`;
+        }
       }
 
       await client.messages.create({
@@ -134,16 +143,65 @@ router.post('/send-mobile-otp', authenticateToken, async (req, res) => {
         to: formattedMobile
       });
       console.log(`✅ SMS sent successfully to ${formattedMobile}`);
+      smsSent = true;
     } catch (smsError) {
       console.error('❌ Failed to send verification SMS:', smsError.message);
-      // We don't fail the request here, as the OTP is still logged to terminal for dev
+      if (smsError.code === 21614) {
+        smsErrorMessage = 'Twilio Trial: The number is not verified. Please verify the recipient number in the Twilio console or upgrade your account.';
+        console.warn(`⚠️ ${smsErrorMessage}`);
+      } else {
+        smsErrorMessage = `SMS failed: ${smsError.message}`;
+      }
     }
 
-    console.log('==========================================');
-    console.log(`MOBILE OTP FOR ${mobile}: ${otp}`);
-    console.log('==========================================');
+    // Fallback: Send mobile OTP via email if SMS fails
+    let emailSent = false;
+    if (!smsSent) {
+      try {
+        const { sendEmail } = await import('../utils/email.js');
+        await sendEmail({
+          to: user.email,
+          subject: 'RideFlow Mobile Verification OTP (Fallback)',
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; color: #333;">
+              <h2>Mobile Verification OTP</h2>
+              <p>We tried to send an SMS to <strong>${mobile}</strong> but it failed.</p>
+              <p>Your verification code is:</p>
+              <h1 style="color: #ff6600; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+              <p>This code will expire in 10 minutes.</p>
+              <p>If you didn't request this, please ignore this email.</p>
+            </div>
+          `,
+          text: `Your RideFlow mobile verification code (fallback) is: ${otp}`
+        });
+        console.log(`✅ Fallback OTP sent to email: ${user.email}`);
+        emailSent = true;
+      } catch (emailError) {
+        console.error('❌ Failed to send fallback verification email:', emailError.message);
+      }
+    }
 
-    res.json({ message: 'OTP sent to mobile', devOTP: otp });
+    // Logging for development only
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('==========================================');
+      console.log(`MOBILE OTP FOR ${mobile}: ${otp}`);
+      console.log('==========================================');
+    }
+
+    if (smsSent) {
+      res.json({ message: 'OTP sent to mobile successfully', devOTP: process.env.NODE_ENV !== 'production' ? otp : undefined });
+    } else if (emailSent) {
+      res.json({ 
+        message: 'SMS delivery failed. OTP has been sent to your registered email instead.', 
+        error: smsErrorMessage,
+        devOTP: process.env.NODE_ENV !== 'production' ? otp : undefined 
+      });
+    } else {
+      res.status(500).json({ 
+        message: 'Failed to deliver OTP via SMS and email. Please try again later or contact support.',
+        error: smsErrorMessage
+      });
+    }
   } catch (error) {
     console.error('Send mobile OTP error:', error);
     res.status(500).json({ message: 'Error sending mobile OTP' });

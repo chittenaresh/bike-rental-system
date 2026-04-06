@@ -41,6 +41,7 @@ import {
   XCircle,
   Send,
   Mail,
+  Phone,
   Paperclip,
   X,
   MoreVertical
@@ -57,15 +58,19 @@ interface Ticket {
   userId?: { _id: string; name: string; email: string; mobile: string };
   guestName?: string;
   guestEmail?: string;
+  contactName?: string;
+  contactEmail?: string;
   rentalId?: any;
   messages: Message[];
 }
 
 interface Message {
   _id: string;
-  senderId?: { _id: string; name: string; role: string } | string;
+  senderId: { _id: string; name: string; role: string } | string;
   guestName?: string;
   guestEmail?: string;
+  contactName?: string;
+  contactEmail?: string;
   senderRole: string;
   content: string;
   attachments: string[];
@@ -126,8 +131,8 @@ export function SupportManager() {
   };
 
   const filteredTickets = tickets.filter(ticket => {
-    const userName = ticket.userId?.name || ticket.guestName || '';
-    const userEmail = ticket.userId?.email || ticket.guestEmail || '';
+    const userName = ticket.contactName || ticket.guestName || ticket.userId?.name || '';
+    const userEmail = ticket.contactEmail || ticket.guestEmail || ticket.userId?.email || '';
 
     const matchesSearch = 
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -237,8 +242,8 @@ export function SupportManager() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span>{ticket.userId?.name || ticket.guestName || 'Guest'}</span>
-                      <span className="text-xs text-muted-foreground">{ticket.userId?.email || ticket.guestEmail}</span>
+                      <span>{ticket.contactName || ticket.guestName || ticket.userId?.name || 'Guest'}</span>
+                      <span className="text-xs text-muted-foreground">{ticket.contactEmail || ticket.guestEmail || ticket.userId?.email}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -456,21 +461,37 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
               </div>
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t">
-              <div className="flex items-center gap-1">
-                <div className="h-2 w-2 rounded-full bg-primary" />
-                <span>{currentTicket.userId?.name || currentTicket.guestName || 'Guest'}</span>
+            <div className="flex flex-col gap-2 text-sm text-muted-foreground pt-2 border-t">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <span className="font-medium text-foreground">{currentTicket.contactName || currentTicket.guestName || currentTicket.userId?.name || 'Guest'}</span>
+                </div>
+                <div>•</div>
+                <div className="flex items-center gap-1.5">
+                  <Mail className="h-3 w-3" />
+                  <span>{currentTicket.contactEmail || currentTicket.guestEmail || currentTicket.userId?.email}</span>
+                </div>
+                {currentTicket.userId?.mobile && (
+                  <>
+                    <div>•</div>
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="h-3 w-3" />
+                      <span>{currentTicket.userId.mobile}</span>
+                    </div>
+                  </>
+                )}
+                <div>•</div>
+                <div className="capitalize font-medium text-primary/80">{currentTicket.category}</div>
               </div>
-              <div>•</div>
-              <div>{currentTicket.userId?.email || currentTicket.guestEmail}</div>
-              {currentTicket.userId?.mobile && (
-                <>
-                  <div>•</div>
-                  <div>{currentTicket.userId.mobile}</div>
-                </>
+              
+              {currentTicket.userId && (currentTicket.contactEmail || currentTicket.guestEmail) && 
+               (currentTicket.contactEmail || currentTicket.guestEmail) !== currentTicket.userId.email && (
+                <div className="flex items-center gap-2 px-2 py-1 bg-orange-50 text-orange-700 rounded text-[10px] w-fit border border-orange-100">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>Account Email: {currentTicket.userId.email} (Different from contact email)</span>
+                </div>
               )}
-              <div>•</div>
-              <div className="capitalize">{currentTicket.category}</div>
             </div>
 
             {currentTicket.rentalId && (
@@ -578,7 +599,7 @@ function AdminTicketDetailSheet({ ticket, open, onOpenChange, onUpdate }: { tick
             </div>
             {isEmailReply && (
               <span className="text-[10px] text-orange-600 font-medium animate-pulse">
-                Replying to {currentTicket.userId?.email || currentTicket.guestEmail}
+                Replying to {currentTicket.contactEmail || currentTicket.guestEmail || currentTicket.userId?.email}
               </span>
             )}
           </div>

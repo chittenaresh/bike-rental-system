@@ -521,7 +521,7 @@ export default function RideFinder() {
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <aside className="hidden md:block md:col-span-4 lg:col-span-3">
-              <div className="sticky top-28 space-y-4">
+              <div className="md:sticky md:top-28 space-y-4 md:max-h-[calc(100vh-10rem)] overflow-y-auto">
                 <div className="bg-card rounded-2xl p-4 shadow-card space-y-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

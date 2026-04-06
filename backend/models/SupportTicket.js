@@ -8,6 +8,8 @@ const messageSchema = new mongoose.Schema({
   },
   guestName: String,
   guestEmail: String,
+  contactName: String,
+  contactEmail: String,
   senderRole: {
     type: String,
     enum: ['user', 'admin', 'superadmin', 'guest'],
@@ -40,6 +42,8 @@ const supportTicketSchema = new mongoose.Schema({
   },
   guestName: String,
   guestEmail: String,
+  contactName: String,
+  contactEmail: String,
   rentalId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Rental'
