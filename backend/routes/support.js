@@ -10,6 +10,18 @@ import SupportReply from '../models/SupportReply.js';
 import { sendEmail } from '../utils/email.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'support');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -120,43 +132,61 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       return res.status(400).json({ message: 'No file provided' });
     }
 
+    const ext = req.file.originalname.split('.').pop() || 'jpg';
+    const userId = req.user?.userId || req.user?.id || 'guest';
+    const fileName = `${userId}-${Date.now()}.${ext}`;
+    
+    // Try AWS S3 upload first
     const REGION = process.env.AWS_REGION;
     const BUCKET = process.env.AWS_S3_BUCKET;
     const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
     const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 
-    if (!REGION || !BUCKET || !ACCESS_KEY_ID || !SECRET_ACCESS_KEY) {
-      console.error('[SUPPORT UPLOAD] Storage configuration missing');
-      return res.status(500).json({ message: 'Storage configuration missing' });
+    if (REGION && BUCKET && ACCESS_KEY_ID && SECRET_ACCESS_KEY) {
+      try {
+        const s3 = new S3Client({
+          region: REGION,
+          credentials: {
+            accessKeyId: ACCESS_KEY_ID,
+            secretAccessKey: SECRET_ACCESS_KEY,
+          },
+        });
+
+        const key = `support/${fileName}`;
+        console.log('[SUPPORT UPLOAD] Uploading to S3 with key:', key);
+
+        const command = new PutObjectCommand({
+          Bucket: BUCKET,
+          Key: key,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
+        });
+
+        await s3.send(command);
+        const fileUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+        console.log('[SUPPORT UPLOAD] S3 Upload successful, file URL:', fileUrl);
+        return res.json({ imageUrl: fileUrl });
+      } catch (s3Error) {
+        console.error('[SUPPORT UPLOAD] S3 upload failed, falling back to local storage:', s3Error.message);
+      }
+    } else {
+      console.warn('[SUPPORT UPLOAD] S3 configuration incomplete, using local storage fallback');
     }
 
-    const s3 = new S3Client({
-      region: REGION,
-      credentials: {
-        accessKeyId: ACCESS_KEY_ID,
-        secretAccessKey: SECRET_ACCESS_KEY,
-      },
-    });
-
-    const ext = req.file.originalname.split('.').pop() || 'jpg';
-    const userId = req.user?.userId || req.user?.id || 'guest';
-    const key = `support/${userId}-${Date.now()}.${ext}`;
-    console.log('[SUPPORT UPLOAD] Uploading to S3 with key:', key);
-
-    const command = new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: req.file.buffer,
-      ContentType: req.file.mimetype,
-    });
-
-    await s3.send(command);
-    const fileUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
-    console.log('[SUPPORT UPLOAD] Upload successful, file URL:', fileUrl);
-
+    // Fallback: Local Storage
+    const localFilePath = path.join(UPLOADS_DIR, fileName);
+    fs.writeFileSync(localFilePath, req.file.buffer);
+    
+    // Construct local URL
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const fileUrl = `${protocol}://${host}/uploads/support/${fileName}`;
+    
+    console.log('[SUPPORT UPLOAD] Local upload successful, file URL:', fileUrl);
     res.json({ imageUrl: fileUrl });
+
   } catch (error) {
-    console.error('[SUPPORT UPLOAD] Error:', error);
+    console.error('[SUPPORT UPLOAD] Final Error:', error);
     res.status(500).json({ message: 'Error uploading file', details: error.message });
   }
 });

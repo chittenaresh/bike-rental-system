@@ -769,20 +769,6 @@ export default function SuperAdmin() {
                 </Badge>
               )}
             </div>
-
-            {activeTab === 'locations' && (
-              <Button 
-                onClick={() => {
-                  setEditingLocation(null);
-                  setLocationForm({ name: '', city: '', state: '', country: 'India' });
-                  setLocationDialogOpen(true);
-                }}
-                className="w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Location
-              </Button>
-            )}
           </div>
         )}
 
@@ -1857,7 +1843,20 @@ export default function SuperAdmin() {
 
         {activeTab === 'locations' && (
           <div className="bg-card rounded-2xl shadow-card p-6">
-            <h2 className="font-display font-semibold text-lg mb-4">Locations</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display font-semibold text-lg">Locations</h2>
+              <Button 
+                onClick={() => {
+                  setEditingLocation(null);
+                  setLocationForm({ name: '', city: '', state: '', country: 'India' });
+                  setLocationDialogOpen(true);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Location
+              </Button>
+            </div>
             <div className="grid md:grid-cols-2 gap-4">
               {locations.map((loc) => (
                 <div key={loc.id} className="border rounded-lg p-4">
@@ -1926,22 +1925,39 @@ export default function SuperAdmin() {
                     <Button
                       className="flex-1"
                       onClick={async () => {
-                        if (!locationForm.name || !locationForm.city || !locationForm.state) {
-                          toast({ title: 'Error', description: 'All fields are mandatory', variant: 'destructive' });
+                        if (!locationForm.name.trim()) {
+                          toast({ title: 'Error', description: 'Location name is required', variant: 'destructive' });
                           return;
                         }
+                        
+                        // Default city/state to name if empty
+                        const finalForm = {
+                          ...locationForm,
+                          city: locationForm.city || locationForm.name,
+                          state: locationForm.state || locationForm.name
+                        };
+
                         try {
                           if (editingLocation) {
-                            await locationsAPI.update(editingLocation.id, locationForm);
-                            toast({ title: 'Location updated' });
-                          } else {
-                            // Frontend check for duplicates (backend also checks)
-                            const exists = locations.some(l => l.name.toLowerCase() === locationForm.name.toLowerCase());
+                            // Check for duplicates when editing (excluding current)
+                            const exists = locations.some(l => 
+                              l.id !== editingLocation.id && 
+                              l.name.toLowerCase() === finalForm.name.toLowerCase()
+                            );
                             if (exists) {
                               toast({ title: 'Error', description: 'Location with this name already exists', variant: 'destructive' });
                               return;
                             }
-                            await locationsAPI.create(locationForm);
+                            await locationsAPI.update(editingLocation.id, finalForm);
+                            toast({ title: 'Location updated' });
+                          } else {
+                            // Frontend check for duplicates
+                            const exists = locations.some(l => l.name.toLowerCase() === finalForm.name.toLowerCase());
+                            if (exists) {
+                              toast({ title: 'Error', description: 'Location with this name already exists', variant: 'destructive' });
+                              return;
+                            }
+                            await locationsAPI.create(finalForm);
                             toast({ title: 'Location created' });
                           }
                           setLocationDialogOpen(false);

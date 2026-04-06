@@ -98,6 +98,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // =====================================
 // ✅ STATIC ASSETS (Optional)
 // =====================================
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // app.use('/uploads', express.static('uploads'));
 
 // =====================================
@@ -166,10 +171,21 @@ const startServer = async () => {
 
     initCronJobs(); // ✅ after DB
 
-    app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  logger.info(`🚀 Server running on port ${PORT}`);
-});
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      logger.info(`🚀 Server running on port ${PORT}`);
+    });
+
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use. Please stop the process using this port and try again.`);
+        logger.error(`❌ Port ${PORT} is already in use`);
+      } else {
+        console.error('❌ Server error:', error.message);
+        logger.error('❌ Server error:', error.message);
+      }
+      process.exit(1);
+    });
 
   } catch (error) {
     logger.error("❌ Failed to start server:", error.message);

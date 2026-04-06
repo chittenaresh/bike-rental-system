@@ -6,6 +6,18 @@ import { createPresignedUpload } from '../utils/s3.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'documents');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -103,32 +115,54 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
     if (!file || !name || !type) {
       return res.status(400).json({ message: 'file, name and type are required' });
     }
+
+    const ext = (name.split('.').pop() || 'bin').toLowerCase();
+    const fileName = `${req.user.userId}-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.${ext}`;
+    
+    // Try S3 first
     const REGION = process.env.AWS_REGION;
     const BUCKET = process.env.AWS_S3_BUCKET;
     const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
     const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
-    if (!REGION || !BUCKET || !ACCESS_KEY_ID || !SECRET_ACCESS_KEY) {
-      return res.status(500).json({ message: 'Missing AWS configuration' });
+
+    if (REGION && BUCKET && ACCESS_KEY_ID && SECRET_ACCESS_KEY) {
+      try {
+        const s3 = new S3Client({
+          region: REGION,
+          credentials: {
+            accessKeyId: ACCESS_KEY_ID,
+            secretAccessKey: SECRET_ACCESS_KEY,
+          },
+        });
+
+        const key = `documents/${req.user.userId}/${fileName}`;
+        await s3.send(new PutObjectCommand({
+          Bucket: BUCKET,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        }));
+        const fileUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+        console.log('[DOC UPLOAD] S3 upload successful:', fileUrl);
+        return res.json({ fileUrl, key });
+      } catch (s3Error) {
+        console.warn('[DOC UPLOAD] S3 upload failed, falling back to local storage:', s3Error.message);
+      }
     }
-    const s3 = new S3Client({
-      region: REGION,
-      credentials: {
-        accessKeyId: ACCESS_KEY_ID,
-        secretAccessKey: SECRET_ACCESS_KEY,
-      },
-    });
-    const ext = (name.split('.').pop() || 'bin').toLowerCase();
-    const key = `documents/${req.user.userId}/${Date.now()}-${crypto.randomBytes(8).toString('hex')}.${ext}`;
-    await s3.send(new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    }));
-    const fileUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+
+    // Fallback: Local Storage
+    const localFilePath = path.join(UPLOADS_DIR, fileName);
+    fs.writeFileSync(localFilePath, file.buffer);
+    
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const fileUrl = `${protocol}://${host}/uploads/documents/${fileName}`;
+    const key = `documents/${fileName}`;
+    
+    console.log('[DOC UPLOAD] Local upload successful:', fileUrl);
     res.json({ fileUrl, key });
   } catch (error) {
-    console.error('Direct upload error:', error?.message || error);
+    console.error('Upload error:', error?.message || error);
     res.status(500).json({ message: error?.message || 'Error uploading file' });
   }
 });

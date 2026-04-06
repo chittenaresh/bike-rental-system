@@ -16,3 +16,16 @@
 {"level":"error","message":"CastError: Cast to ObjectId failed for value \"null\" (type string) at path \"_id\" for model \"Bike\"","method":"GET","path":"/api/bikes/null?_t=1775032355306","stack":null,"timestamp":"2026-04-01T08:32:35.317Z"}
 {"level":"error","message":"CastError: Cast to ObjectId failed for value \"null\" (type string) at path \"_id\" for model \"Bike\"","method":"GET","path":"/api/bikes/null?_t=1775032361007","stack":null,"timestamp":"2026-04-01T08:32:41.017Z"}
 {"level":"error","message":"CastError: Cast to ObjectId failed for value \"null\" (type string) at path \"_id\" for model \"Bike\"","method":"GET","path":"/api/bikes/null?_t=1775033148929","stack":null,"timestamp":"2026-04-01T08:45:48.952Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:45:18.847Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:45:19.136Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:54:06.863Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:54:40.964Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:54:41.351Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:54:50.548Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:54:50.829Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:55:10.382Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:55:10.469Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:55:37.515Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:55:37.653Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:55:50.201Z"}
+{"level":"error","message":"❌ Port 9000 is already in use","timestamp":"2026-04-06T06:55:50.498Z"}
