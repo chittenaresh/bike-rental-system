@@ -118,33 +118,40 @@ export default function Auth() {
     }
 
     // Normal Login/Signup Flow
+    const errors: string[] = [];
+
     // Email Validation
     const emailError = validateEmail(formData.email);
     if (emailError) {
-      toast({ title: "Error", description: emailError, variant: "destructive" });
-      return;
+      errors.push("invalid mail address");
     }
 
     // Name Validation - Only for Signup
     if (!isLogin) {
       const nameError = validateName(formData.name);
       if (nameError) {
-        toast({ title: "Error", description: nameError, variant: "destructive" });
-        return;
+        errors.push(nameError);
       }
     }
 
-    // Password Validation - Only for Signup
+    // Password Validation
     if (!isLogin) {
       const passwordError = validatePassword(formData.password);
       if (passwordError) {
-        toast({ title: "Weak Password", description: passwordError, variant: "destructive" });
-        return;
+        errors.push(passwordError);
       }
+    } else if (!formData.password) { // For login, check if password is empty
+      errors.push("invalid password");
     }
 
-    if (!formData.password) {
-      toast({ title: "Error", description: "Password is required", variant: "destructive" });
+    if (errors.length > 0) {
+      let finalMessage = "";
+      if (isLogin && errors.includes("invalid mail address") && errors.includes("invalid password")) {
+        finalMessage = "invalid email and password";
+      } else {
+        finalMessage = errors.join(", ");
+      }
+      toast({ title: "Error", description: finalMessage, variant: "destructive" });
       return;
     }
 

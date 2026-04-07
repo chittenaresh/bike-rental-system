@@ -294,13 +294,16 @@ router.post('/login', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email address' });
+      if (password.length >= 8) {
+        return res.status(401).json({ message: 'invalid email and password' });
+      }
+      return res.status(401).json({ message: 'invalid mail address' });
     }
 
     // Check password
     const isValidPassword = await user.comparePassword(password);
     if (!isValidPassword) {
-      return res.status(401).json({ message: 'Incorrect password' });
+      return res.status(401).json({ message: 'invalid password' });
     }
 
     // Generate token
