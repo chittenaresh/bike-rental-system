@@ -117,6 +117,19 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       return res.status(400).json({ message: 'file, name and type are required' });
     }
 
+    // Validation for bike images
+    if (type === 'bike_image') {
+      const allowedFormats = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedFormats.includes(file.mimetype)) {
+        return res.status(400).json({ message: 'Invalid file type. Only JPG, PNG and WEBP are supported.' });
+      }
+
+      const maxSize = 2 * 1024 * 1024; // 2MB
+      if (file.size > maxSize) {
+        return res.status(400).json({ message: 'File too large. Maximum size is 2MB.' });
+      }
+    }
+
     const ext = (name.split('.').pop() || 'bin').toLowerCase();
     const fileName = `${req.user.userId}-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.${ext}`;
     

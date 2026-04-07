@@ -119,7 +119,7 @@ export default function SuperAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [homeHeroImageUrl, setHomeHeroImageUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [createAdminOpen, setCreateAdminOpen] = useState(false);
   const [newAdminForm, setNewAdminForm] = useState({ name: '', email: '', password: '', confirmPassword: '', locationId: '' });
   const [newAdminCity, setNewAdminCity] = useState<string>('');
@@ -189,6 +189,58 @@ export default function SuperAdmin() {
   const [selectedLocationFilter, setSelectedLocationFilter] = useState<string>('all');
   const [documentsSort, setDocumentsSort] = useState<'newest' | 'oldest'>('newest');
   const [mounted, setMounted] = useState(false);
+  const [numericErrors, setNumericErrors] = useState<Record<string, string>>({});
+
+  // Numeric input validation helper
+  const handleNumericChange = (field: string, value: string) => {
+    if (value === '') {
+      setBikeForm({ ...bikeForm, [field]: '' });
+      setNumericErrors(prev => ({ ...prev, [field]: '' }));
+      return;
+    }
+
+    const constraints: Record<string, { maxLen: number; maxVal: number }> = {
+      weekdayRate: { maxLen: 5, maxVal: 99999 },
+      weekendRate: { maxLen: 5, maxVal: 99999 },
+      kmLimitPerHour: { maxLen: 3, maxVal: 999 },
+      kmLimit: { maxLen: 3, maxVal: 999 },
+      excessKmCharge: { maxLen: 4, maxVal: 9999 },
+      minBookingHours: { maxLen: 2, maxVal: 24 },
+      gstPercentage: { maxLen: 3, maxVal: 100 },
+    };
+
+    const config = constraints[field];
+    const regex = /^\d*\.?\d*$/;
+
+    if (!regex.test(value)) {
+      setNumericErrors(prev => ({ ...prev, [field]: 'Only numbers are allowed' }));
+      return;
+    }
+
+    if (config) {
+      const digitOnly = value.split('.')[0];
+      if (digitOnly.length > config.maxLen) {
+        setNumericErrors(prev => ({ ...prev, [field]: 'Maximum limit exceeded' }));
+        return;
+      }
+      const num = parseFloat(value);
+      if (num > config.maxVal) {
+        setNumericErrors(prev => ({ ...prev, [field]: `Max value is ${config.maxVal}` }));
+        return;
+      }
+    }
+
+    setBikeForm({ ...bikeForm, [field]: value });
+    setNumericErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Block e, +, -, and other non-numeric keys except control keys
+    const blockedKeys = ['e', 'E', '+', '-'];
+    if (blockedKeys.includes(e.key)) {
+      e.preventDefault();
+    }
+  };
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -2058,75 +2110,100 @@ export default function SuperAdmin() {
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Weekday Rate (₹/hr)</Label>
                   <Input 
-                    type="number"
+                    type="text"
                     placeholder="Weekday Rate" 
                     value={bikeForm.weekdayRate} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, weekdayRate: e.target.value })} 
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    onChange={(e) => handleNumericChange('weekdayRate', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.weekdayRate ? 'border-destructive' : ''}
                   />
+                  {numericErrors.weekdayRate && (
+                    <p className="text-[10px] text-destructive">{numericErrors.weekdayRate}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Weekend Rate (₹/hr)</Label>
                   <Input 
-                    type="number"
+                    type="text"
                     placeholder="Weekend Rate" 
                     value={bikeForm.weekendRate} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, weekendRate: e.target.value })} 
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    onChange={(e) => handleNumericChange('weekendRate', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.weekendRate ? 'border-destructive' : ''}
                   />
+                  {numericErrors.weekendRate && (
+                    <p className="text-[10px] text-destructive">{numericErrors.weekendRate}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Excess KM Charge (₹/km)</Label>
                   <Input 
-                    type="number"
+                    type="text"
                     placeholder="Excess Charge" 
                     value={bikeForm.excessKmCharge} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, excessKmCharge: e.target.value })} 
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    onChange={(e) => handleNumericChange('excessKmCharge', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.excessKmCharge ? 'border-destructive' : ''}
                   />
+                  {numericErrors.excessKmCharge && (
+                    <p className="text-[10px] text-destructive">{numericErrors.excessKmCharge}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">KM Limit Per Hour</Label>
                   <Input 
-                    type="number"
+                    type="text"
                     placeholder="KM Limit/Hr" 
                     value={bikeForm.kmLimitPerHour} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, kmLimitPerHour: e.target.value })} 
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    onChange={(e) => handleNumericChange('kmLimitPerHour', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.kmLimitPerHour ? 'border-destructive' : ''}
                   />
+                  {numericErrors.kmLimitPerHour && (
+                    <p className="text-[10px] text-destructive">{numericErrors.kmLimitPerHour}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">KM Limit</Label>
                   <Input 
-                    type="number"
+                    type="text"
                     placeholder="KM Limit" 
                     value={bikeForm.kmLimit} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, kmLimit: e.target.value })} 
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    onChange={(e) => handleNumericChange('kmLimit', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.kmLimit ? 'border-destructive' : ''}
                   />
+                  {numericErrors.kmLimit && (
+                    <p className="text-[10px] text-destructive">{numericErrors.kmLimit}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Min Booking Hours</Label>
                   <Input 
-                    type="number"
+                    type="text"
                     placeholder="Min Hours" 
                     value={bikeForm.minBookingHours} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, minBookingHours: e.target.value })} 
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    onChange={(e) => handleNumericChange('minBookingHours', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.minBookingHours ? 'border-destructive' : ''}
                   />
+                  {numericErrors.minBookingHours && (
+                    <p className="text-[10px] text-destructive">{numericErrors.minBookingHours}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">GST Percentage (%)</Label>
                   <Input 
-                    type="number"
+                    type="text"
                     placeholder="GST %" 
                     value={bikeForm.gstPercentage} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, gstPercentage: e.target.value })} 
-                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                    min="0"
-                    max="100"
-                    step="0.01"
+                    onChange={(e) => handleNumericChange('gstPercentage', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.gstPercentage ? 'border-destructive' : ''}
                   />
+                  {numericErrors.gstPercentage && (
+                    <p className="text-[10px] text-destructive">{numericErrors.gstPercentage}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -2151,11 +2228,38 @@ export default function SuperAdmin() {
                   <div className="relative">
                     <Input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       className="cursor-pointer"
+                      disabled={isUploading}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
+
+                        // Validation: Formats
+                        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                        if (!validTypes.includes(file.type)) {
+                          toast({
+                            title: 'Invalid file type',
+                            description: 'Please upload a JPG, PNG, or WEBP image.',
+                            variant: 'destructive',
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+
+                        // Validation: Size (2MB)
+                        const maxSize = 2 * 1024 * 1024;
+                        if (file.size > maxSize) {
+                          toast({
+                            title: 'File too large',
+                            description: 'Image size should be less than 2MB.',
+                            variant: 'destructive',
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+
+                        setIsUploading(true);
                         try {
                           const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
                           if (res?.fileUrl) {
@@ -2166,11 +2270,17 @@ export default function SuperAdmin() {
                           }
                         } catch (err: any) {
                           toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
+                        } finally {
+                          setIsUploading(false);
                         }
                       }}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                      <Download className="h-4 w-4" />
+                      {isUploading ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
                     </div>
                   </div>
                   <p className="text-[10px] text-muted-foreground">Tip: Click image to see larger preview</p>
@@ -2245,17 +2355,37 @@ export default function SuperAdmin() {
 
             <div className="flex gap-2">
               <Button
+                disabled={isUploading}
                 onClick={async () => {
                   try {
-                            const payload: any = {
-                              name: bikeForm.name,
-                            brand: (bikeForm.brand || '').trim(),
-                            year: bikeForm.year ? parseInt(bikeForm.year) : null,
-                            type: bikeForm.type,
-                            locationId: bikeForm.locationId,
-                            image: bikeForm.image,
-                            images: bikeForm.images,
-                          };
+                    // Form validation
+                    if (!bikeForm.image) {
+                      toast({
+                        title: 'Vehicle image is required',
+                        description: 'Please upload or provide an image URL for the vehicle.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
+                    if (isUploading) {
+                      toast({
+                        title: 'Please wait',
+                        description: 'Wait for image upload to complete.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
+                    const payload: any = {
+                      name: bikeForm.name,
+                      brand: (bikeForm.brand || '').trim(),
+                      year: bikeForm.year ? parseInt(bikeForm.year) : null,
+                      type: bikeForm.type,
+                      locationId: bikeForm.locationId,
+                      image: bikeForm.image,
+                      images: bikeForm.images,
+                    };
 
                           payload.kmLimit = bikeForm.kmLimit ? parseFloat(bikeForm.kmLimit) : null;
                           

@@ -60,6 +60,10 @@ router.post('/', catchAsync(async (req, res) => {
   });
 
   const savedRental = await newRental.save();
+  
+  // Mark bike as unavailable
+  await Bike.findByIdAndUpdate(bikeId, { available: false });
+  
   res.status(201).json(transformRental(savedRental));
 }));
 
@@ -82,7 +86,7 @@ router.patch('/:id/status', catchAsync(async (req, res) => {
   
   // If completed or cancelled, make bike available again
   if (status === 'completed' || status === 'cancelled') {
-    await Bike.findByIdAndUpdate(rental.bikeId, { available: true });
+    await Bike.findByIdAndUpdate(rental.bikeId, { available: true, status: 'available' });
   }
   
   res.json(transformRental(rental));
@@ -101,7 +105,7 @@ router.post('/:id/cancel', catchAsync(async (req, res) => {
   await rental.save();
 
   // Make bike available again
-  await Bike.findByIdAndUpdate(rental.bikeId, { available: true });
+  await Bike.findByIdAndUpdate(rental.bikeId, { available: true, status: 'available' });
 
   res.json(transformRental(rental));
 }));
@@ -141,7 +145,7 @@ router.post('/:id/complete', catchAsync(async (req, res) => {
   await rental.save();
 
   // Make bike available again
-  await Bike.findByIdAndUpdate(rental.bikeId, { available: true });
+  await Bike.findByIdAndUpdate(rental.bikeId, { available: true, status: 'available' });
 
   res.json(transformRental(rental));
 }));

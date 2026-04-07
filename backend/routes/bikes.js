@@ -9,12 +9,68 @@ import { catchAsync } from '../utils/catchAsync.js';
 
 const router = express.Router();
 
+// Helper to validate numeric fields
+const validateNumericFields = (fields, data) => {
+  const constraints = {
+    weekdayRate: { maxLen: 5, maxVal: 99999 },
+    weekendRate: { maxLen: 5, maxVal: 99999 },
+    kmLimitPerHour: { maxLen: 3, maxVal: 999 },
+    kmLimit: { maxLen: 3, maxVal: 999 },
+    excessKmCharge: { maxLen: 4, maxVal: 9999 },
+    minBookingHours: { maxLen: 2, maxVal: 24 },
+    gstPercentage: { maxLen: 3, maxVal: 100 }
+  };
+
+  for (const field of fields) {
+    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+      const val = parseFloat(data[field]);
+      if (isNaN(val) || val < 0) {
+        return `${field} must be a valid positive number`;
+      }
+
+      const config = constraints[field];
+      if (config) {
+        const strVal = String(data[field]).split('.')[0];
+        if (strVal.length > config.maxLen) {
+          return `${field} exceeds maximum digit limit of ${config.maxLen}`;
+        }
+        if (val > config.maxVal) {
+          return `${field} exceeds maximum value of ${config.maxVal}`;
+        }
+      }
+
+      // Check for scientific notation or other invalid characters if it was a string
+      if (typeof data[field] === 'string' && (/[eE\+\-]/.test(data[field]) || !/^\d*\.?\d*$/.test(data[field]))) {
+        return `${field} contains invalid characters`;
+      }
+    }
+  }
+  return null;
+};
+
 // Get all bikes (optionally filter by location)
 router.get('/', catchAsync(async (req, res) => {
-  const { locationId } = req.query;
-  let query = {};
+  const { locationId, q } = req.query;
+  const query = {};
   if (locationId) {
     query.locationId = locationId;
+  }
+  if (q && typeof q === 'string' && q.trim() !== '') {
+    const search = q.trim();
+    const isNumeric = /^\d+$/.test(search);
+    if (isNumeric) {
+      const yearInt = parseInt(search, 10);
+      if (!isNaN(yearInt)) {
+        query.year = yearInt;
+      }
+    } else {
+      const regex = new RegExp(search, 'i');
+      query.$or = [
+        { name: regex },
+        { brand: regex },
+        { type: regex },
+      ];
+    }
   }
   const bikes = await Bike.find(query).populate('locationId', 'name city state');
   // Transform _id to id for frontend compatibility
@@ -90,8 +146,19 @@ router.post('/', authenticateToken, authorize(['admin', 'superadmin']), catchAsy
     locationId
   } = req.body;
 
-  if (!name || !type || !locationId || !brand) {
-    return res.status(400).json({ message: 'Required fields missing: name, type, brand, locationId' });
+  if (!name || !type || !locationId || !brand || !req.body.image) {
+    return res.status(400).json({ message: 'Required fields missing: name, type, brand, locationId, image' });
+  }
+
+  // Numeric fields validation
+  const numericFields = [
+    'pricePerHour', 'price12Hours', 'pricePerWeek', 'kmLimit',
+    'weekdayRate', 'weekendRate', 'excessKmCharge', 'kmLimitPerHour',
+    'minBookingHours', 'gstPercentage'
+  ];
+  const numericError = validateNumericFields(numericFields, req.body);
+  if (numericError) {
+    return res.status(400).json({ message: numericError });
   }
 
   // Basic validation for year if provided
@@ -114,9 +181,30 @@ router.post('/', authenticateToken, authorize(['admin', 'superadmin']), catchAsy
 
 // Update bike (admin only)
 router.put('/:id', authenticateToken, authorize(['admin', 'superadmin']), catchAsync(async (req, res) => {
+  const updateData = { ...req.body };
+
+  // Numeric fields validation
+  const numericFields = [
+    'pricePerHour', 'price12Hours', 'pricePerWeek', 'kmLimit',
+    'weekdayRate', 'weekendRate', 'excessKmCharge', 'kmLimitPerHour',
+    'minBookingHours', 'gstPercentage', 'year'
+  ];
+  const numericError = validateNumericFields(numericFields, updateData);
+  if (numericError) {
+    return res.status(400).json({ message: numericError });
+  }
+
+  if (updateData.status) {
+    if (updateData.status === 'available') {
+      updateData.available = true;
+    } else if (updateData.status === 'maintenance' || updateData.status === 'disabled') {
+      updateData.available = false;
+    }
+  }
+
   const updatedBike = await Bike.findByIdAndUpdate(
     req.params.id,
-    { ...req.body },
+    updateData,
     { new: true, runValidators: true }
   );
 

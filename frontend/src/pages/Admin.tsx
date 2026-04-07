@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,14 +17,11 @@ import {
   LogOut,
   Menu,
   LayoutDashboard,
-  IndianRupee,
   Plus,
   Edit,
   Trash2,
   MapPin,
   Shield,
-  Mail,
-  Phone,
   Calendar as CalendarIcon,
   Wrench,
   Download,
@@ -82,6 +79,14 @@ interface User {
   currentLocationId?: string;
   currentAddress?: string;
   locationId?: string | { id?: string; _id?: string };
+  documents?: Document[];
+  createdAt?: string;
+  mobile?: string;
+  emergencyContact?: string;
+  familyContact?: string;
+  permanentAddress?: string;
+  hotelStay?: string;
+  walletBalance?: number;
 }
 
 interface Location {
@@ -101,12 +106,20 @@ interface Rental {
   delay?: number;
   totalCost?: number;
   bike?: BikeType;
+  user?: User;
+  pickupTime?: string;
+  dropoffTime?: string;
+  totalAmount?: number;
+  userImages?: string[];
 }
 
 interface Document {
   id: string;
+  _id?: string;
   userId: string;
+  name?: string;
   type: string;
+  url?: string;
   status: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
 }
@@ -247,6 +260,7 @@ export default function Admin() {
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'pending'>('all');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [bikeDialogOpen, setBikeDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [editingBike, setEditingBike] = useState<any | null>(null);
 
   // End Ride Dialog State
@@ -302,7 +316,6 @@ export default function Admin() {
     minBookingHours: '',
     gstPercentage: '',
   });
-  const [brandSearch, setBrandSearch] = useState('');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('all');
   const [allVehiclesSearchQuery, setAllVehiclesSearchQuery] = useState('');
   const [viewImagesDialog, setViewImagesDialog] = useState(false);
@@ -316,7 +329,59 @@ export default function Admin() {
   const [docToReject, setDocToReject] = useState<string | null>(null);
   const [bikeSpecs, setBikeSpecs] = useState<any[]>(PREDEFINED_BIKE_SPECS);
   const [mounted, setMounted] = useState(false);
+  const [numericErrors, setNumericErrors] = useState<Record<string, string>>({});
   const { theme, setTheme } = useTheme();
+
+  // Numeric input validation helper
+  const handleNumericChange = (field: string, value: string) => {
+    if (value === '') {
+      setBikeForm({ ...bikeForm, [field]: '' });
+      setNumericErrors(prev => ({ ...prev, [field]: '' }));
+      return;
+    }
+
+    const constraints: Record<string, { maxLen: number; maxVal: number }> = {
+      weekdayRate: { maxLen: 5, maxVal: 99999 },
+      weekendRate: { maxLen: 5, maxVal: 99999 },
+      kmLimitPerHour: { maxLen: 3, maxVal: 999 },
+      kmLimit: { maxLen: 3, maxVal: 999 },
+      excessKmCharge: { maxLen: 4, maxVal: 9999 },
+      minBookingHours: { maxLen: 2, maxVal: 24 },
+      gstPercentage: { maxLen: 3, maxVal: 100 },
+    };
+
+    const config = constraints[field];
+    const regex = /^\d*\.?\d*$/;
+
+    if (!regex.test(value)) {
+      setNumericErrors(prev => ({ ...prev, [field]: 'Only numbers are allowed' }));
+      return;
+    }
+
+    if (config) {
+      const digitOnly = value.split('.')[0];
+      if (digitOnly.length > config.maxLen) {
+        setNumericErrors(prev => ({ ...prev, [field]: 'Maximum limit exceeded' }));
+        return;
+      }
+      const num = parseFloat(value);
+      if (num > config.maxVal) {
+        setNumericErrors(prev => ({ ...prev, [field]: `Max value is ${config.maxVal}` }));
+        return;
+      }
+    }
+
+    setBikeForm({ ...bikeForm, [field]: value });
+    setNumericErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Block e, +, -, and other non-numeric keys except control keys
+    const blockedKeys = ['e', 'E', '+', '-'];
+    if (blockedKeys.includes(e.key)) {
+      e.preventDefault();
+    }
+  };
 
   const setTab = (tabId: string) => {
     setActiveTab(tabId);
@@ -820,8 +885,8 @@ export default function Admin() {
     if (!bike) return false;
     if (!selectedLocationId) return false;
     const bikeLocationId =
-      typeof bike.locationId === 'object'
-        ? bike.locationId?.id || bike.locationId?._id || bike.locationId?.toString?.()
+      bike.locationId && typeof bike.locationId === 'object'
+        ? (bike.locationId as any)?.id || (bike.locationId as any)?._id || (bike.locationId as any)?.toString?.()
         : bike.locationId;
     return bikeLocationId ? bikeLocationId === selectedLocationId : false;
   });
@@ -1310,7 +1375,7 @@ export default function Admin() {
                           <div className="flex items-center gap-2">
                             {inUseBikeIds.has(bike.id) ? (
                               <Badge className="bg-muted text-muted-foreground">Ride Active</Badge>
-                            ) : bike.available ? (
+                            ) : bike.status === 'available' ? (
                               <>
                                 <Button
                                   variant="outline"
@@ -1365,7 +1430,7 @@ export default function Admin() {
                                   try {
                                     await bikesAPI.update(bike.id, { status: 'available' });
                                     toast({
-                                      title: 'Enabled',
+                                      title: 'Marked Available',
                                       description: `${bike.name} is now available.`,
                                     });
                                     loadData();
@@ -1378,7 +1443,7 @@ export default function Admin() {
                                   }
                                 }}
                               >
-                                Enable
+                                {bike.status === 'maintenance' ? 'Mark as Available' : 'Enable'}
                               </Button>
                             )}
                           </div>
@@ -1464,19 +1529,30 @@ export default function Admin() {
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-4">
-                {bikes
-                  .filter((bike) => {
+                {(() => {
+                  const q = allVehiclesSearchQuery.trim().toLowerCase();
+                  const isNumeric = /^\d+$/.test(q);
+                  const filtered = bikes.filter((bike) => {
                     const matchesSearch =
-                      allVehiclesSearchQuery === '' ||
-                      bike.name.toLowerCase().includes(allVehiclesSearchQuery.toLowerCase()) ||
-                      (bike.brand &&
-                        bike.brand.toLowerCase().includes(allVehiclesSearchQuery.toLowerCase()));
+                      q === '' ||
+                      (isNumeric
+                        ? (bike.year !== undefined && bike.year !== null && bike.year.toString().includes(q))
+                        : bike.name.toLowerCase().includes(q) ||
+                          (bike.brand && bike.brand.toLowerCase().includes(q)) ||
+                          (bike.type && bike.type.toLowerCase().includes(q)));
                     const matchesBrand =
                       selectedBrandFilter === 'all' ||
                       ((bike.brand || '').trim() || 'Unbranded') === selectedBrandFilter;
                     return matchesSearch && matchesBrand;
-                  })
-                  .map((bike) => (
+                  });
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="col-span-2 md:col-span-3 text-center text-muted-foreground py-8">
+                        No vehicles found
+                      </div>
+                    );
+                  }
+                  return filtered.map((bike) => (
                     <div
                       key={bike.id}
                       className="border rounded-lg p-2 sm:p-3 flex flex-col bg-card h-full min-w-0"
@@ -1593,7 +1669,8 @@ export default function Admin() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    ));
+                })()}
               </div>
             </div>
           </div>
@@ -1798,7 +1875,6 @@ export default function Admin() {
 
                                           const bookingStartDate = new Date(r.startTime);
 
-                                          const bike = bikesById[r.bikeId] || r.bike;
                                           setEndRideData({
                                             id: r.id,
                                             bikeId: r.bikeId,
@@ -2300,55 +2376,97 @@ export default function Admin() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Tariff Configuration (Admin Only)</Label>
               <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Weekday Rate (₹/hr)"
-                  type="number"
-                  value={bikeForm.weekdayRate}
-                  onChange={(e) => setBikeForm({ ...bikeForm, weekdayRate: e.target.value })}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                />
-                <Input
-                  placeholder="Weekend Rate (₹/hr)"
-                  type="number"
-                  value={bikeForm.weekendRate}
-                  onChange={(e) => setBikeForm({ ...bikeForm, weekendRate: e.target.value })}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                />
-                <Input
-                  placeholder="Excess KM Charge (₹/km)"
-                  type="number"
-                  value={bikeForm.excessKmCharge}
-                  onChange={(e) => setBikeForm({ ...bikeForm, excessKmCharge: e.target.value })}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                />
-                <Input
-                  placeholder="KM Limit Per Hour"
-                  type="number"
-                  value={bikeForm.kmLimitPerHour}
-                  onChange={(e) => setBikeForm({ ...bikeForm, kmLimitPerHour: e.target.value })}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                />
-                <Input
-                  placeholder="KM Limit"
-                  type="number"
-                  value={bikeForm.kmLimit}
-                  onChange={(e) => setBikeForm({ ...bikeForm, kmLimit: e.target.value })}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                />
-                <Input
-                  placeholder="Min Booking Hours"
-                  type="number"
-                  value={bikeForm.minBookingHours}
-                  onChange={(e) => setBikeForm({ ...bikeForm, minBookingHours: e.target.value })}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                />
-                <Input
-                  placeholder="GST Percentage (%)"
-                  type="number"
-                  value={bikeForm.gstPercentage}
-                  onChange={(e) => setBikeForm({ ...bikeForm, gstPercentage: e.target.value })}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                />
+                <div className="space-y-1">
+                  <Input
+                    placeholder="Weekday Rate (₹/hr)"
+                    type="text"
+                    value={bikeForm.weekdayRate}
+                    onChange={(e) => handleNumericChange('weekdayRate', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.weekdayRate ? 'border-destructive' : ''}
+                  />
+                  {numericErrors.weekdayRate && (
+                    <p className="text-[10px] text-destructive">{numericErrors.weekdayRate}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    placeholder="Weekend Rate (₹/hr)"
+                    type="text"
+                    value={bikeForm.weekendRate}
+                    onChange={(e) => handleNumericChange('weekendRate', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.weekendRate ? 'border-destructive' : ''}
+                  />
+                  {numericErrors.weekendRate && (
+                    <p className="text-[10px] text-destructive">{numericErrors.weekendRate}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    placeholder="Excess KM Charge (₹/km)"
+                    type="text"
+                    value={bikeForm.excessKmCharge}
+                    onChange={(e) => handleNumericChange('excessKmCharge', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.excessKmCharge ? 'border-destructive' : ''}
+                  />
+                  {numericErrors.excessKmCharge && (
+                    <p className="text-[10px] text-destructive">{numericErrors.excessKmCharge}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    placeholder="KM Limit Per Hour"
+                    type="text"
+                    value={bikeForm.kmLimitPerHour}
+                    onChange={(e) => handleNumericChange('kmLimitPerHour', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.kmLimitPerHour ? 'border-destructive' : ''}
+                  />
+                  {numericErrors.kmLimitPerHour && (
+                    <p className="text-[10px] text-destructive">{numericErrors.kmLimitPerHour}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    placeholder="KM Limit"
+                    type="text"
+                    value={bikeForm.kmLimit}
+                    onChange={(e) => handleNumericChange('kmLimit', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.kmLimit ? 'border-destructive' : ''}
+                  />
+                  {numericErrors.kmLimit && (
+                    <p className="text-[10px] text-destructive">{numericErrors.kmLimit}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    placeholder="Min Booking Hours"
+                    type="text"
+                    value={bikeForm.minBookingHours}
+                    onChange={(e) => handleNumericChange('minBookingHours', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.minBookingHours ? 'border-destructive' : ''}
+                  />
+                  {numericErrors.minBookingHours && (
+                    <p className="text-[10px] text-destructive">{numericErrors.minBookingHours}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    placeholder="GST Percentage (%)"
+                    type="text"
+                    value={bikeForm.gstPercentage}
+                    onChange={(e) => handleNumericChange('gstPercentage', e.target.value)}
+                    onKeyDown={handleNumericKeyDown}
+                    className={numericErrors.gstPercentage ? 'border-destructive' : ''}
+                  />
+                  {numericErrors.gstPercentage && (
+                    <p className="text-[10px] text-destructive">{numericErrors.gstPercentage}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2382,11 +2500,38 @@ export default function Admin() {
                   <div className="relative">
                     <Input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       className="cursor-pointer"
+                      disabled={isUploading}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
+
+                        // Validation: Formats
+                        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                        if (!validTypes.includes(file.type)) {
+                          toast({
+                            title: 'Invalid file type',
+                            description: 'Please upload a JPG, PNG, or WEBP image.',
+                            variant: 'destructive',
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+
+                        // Validation: Size (2MB)
+                        const maxSize = 2 * 1024 * 1024;
+                        if (file.size > maxSize) {
+                          toast({
+                            title: 'File too large',
+                            description: 'Image size should be less than 2MB.',
+                            variant: 'destructive',
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+
+                        setIsUploading(true);
                         try {
                           const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
                           if (res?.fileUrl) {
@@ -2408,11 +2553,17 @@ export default function Admin() {
                             description: err.message || 'Failed to upload image',
                             variant: 'destructive',
                           });
+                        } finally {
+                          setIsUploading(false);
                         }
                       }}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                      <Download className="h-4 w-4" />
+                      {isUploading ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
                     </div>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
@@ -2500,8 +2651,28 @@ export default function Admin() {
             </div>
             <div className="flex gap-2">
               <Button
+                disabled={isUploading}
                 onClick={async () => {
                   try {
+                    // Form validation
+                    if (!bikeForm.image) {
+                      toast({
+                        title: 'Vehicle image is required',
+                        description: 'Please upload or provide an image URL for the vehicle.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
+                    if (isUploading) {
+                      toast({
+                        title: 'Please wait',
+                        description: 'Wait for image upload to complete.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
                     const payload: any = {
                       name: bikeForm.name,
                       brand: (bikeForm.brand || '').trim(),
@@ -2627,13 +2798,15 @@ export default function Admin() {
                 <Label htmlFor="startKm">Starting Ride (km)</Label>
                 <Input
                   id="startKm"
-                  type="number"
+                  type="text"
                   value={endRideData.startKm}
                   onChange={(e) => {
-                    const newStartKm = e.target.value;
-                    setEndRideData({ ...endRideData, startKm: newStartKm });
+                    const val = e.target.value;
+                    if (/^\d*\.?\d*$/.test(val)) {
+                      setEndRideData({ ...endRideData, startKm: val });
+                    }
                   }}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                  onKeyDown={handleNumericKeyDown}
                   placeholder="e.g. 12050"
                 />
               </div>
@@ -2641,13 +2814,15 @@ export default function Admin() {
                 <Label htmlFor="endKm">Ending Ride (km)</Label>
                 <Input
                   id="endKm"
-                  type="number"
+                  type="text"
                   value={endRideData.endKm}
                   onChange={(e) => {
-                    const newEndKm = e.target.value;
-                    setEndRideData({ ...endRideData, endKm: newEndKm });
+                    const val = e.target.value;
+                    if (/^\d*\.?\d*$/.test(val)) {
+                      setEndRideData({ ...endRideData, endKm: val });
+                    }
                   }}
-                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                  onKeyDown={handleNumericKeyDown}
                   placeholder="e.g. 12100"
                 />
               </div>
@@ -2963,7 +3138,7 @@ export default function Admin() {
                               <p className="font-semibold text-sm truncate">
                                 {doc.type
                                   .replace('_', ' ')
-                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
+                                  .replace(/\b\w/g, (l: string) => l.toUpperCase())}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">{doc.name}</p>
                             </div>
@@ -3217,7 +3392,7 @@ export default function Admin() {
                         <div className="flex items-center justify-between mb-2 sm:mb-3">
                           <div className="min-w-0 flex-1 mr-2">
                             <p className="font-semibold text-sm truncate">
-                              {doc.type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                              {doc.type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">{doc.name}</p>
                           </div>

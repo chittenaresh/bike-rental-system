@@ -1,4 +1,4 @@
-import { handleApiError, isAuthError, logError } from './errorHandler';
+import { handleApiError, isAuthError, logError, AppApiError } from './errorHandler';
 
 // Get API base URL - prioritize relative path in production for Vercel rewrites to avoid CORS
 const getApiBase = () => {
@@ -82,7 +82,7 @@ async function apiRequest<T>(path: string, init: RequestInit = {}, isPublic = fa
       }
 
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
+      throw new AppApiError(errorData.message || `Request failed with status ${response.status}`, response.status);
     }
 
     if (response.headers.get('Content-Length') === '0' || response.status === 204) {
@@ -129,9 +129,12 @@ export const getCurrentUser = () => {
 };
 
 export const bikesAPI = {
-  getAll: (locationId?: string) => {
-    const query = locationId ? `?locationId=${locationId}&_t=${Date.now()}` : `?_t=${Date.now()}`;
-    return apiRequest<any[]>(`/bikes${query}`);
+  getAll: (locationId?: string, q?: string) => {
+    const params = new URLSearchParams();
+    params.set('_t', String(Date.now()));
+    if (locationId) params.set('locationId', locationId);
+    if (q && q.trim() !== '') params.set('q', q.trim());
+    return apiRequest<any[]>(`/bikes?${params.toString()}`);
   },
   getAvailable: (start: Date, end: Date, locationId?: string) => {
     const query = new URLSearchParams({
@@ -205,13 +208,13 @@ export const documentsAPI = {
         if (res.status === 401 || res.status === 403) {
           handleAuthError();
         }
-        const error = await res.text();
-        throw new Error(error || `Upload failed: ${res.status}`);
+        const errData = await res.json().catch(() => ({}));
+        throw new AppApiError(errData.message || 'Upload failed', res.status);
       }
-      
       return await res.json();
-    } catch (error) {
-      throw handleApiError(error);
+    } catch (err: any) {
+      console.error('[uploadFile] error:', err);
+      throw err;
     }
   },
   updateStatus: (id: string, status: 'pending' | 'approved' | 'rejected', reason?: string) =>

@@ -379,8 +379,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     const user = await User.findById(req.user.userId);
-    if (user.role === 'user' && ticket.userId._id.toString() !== req.user.userId) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (user.role === 'user') {
+      const ticketUserId = ticket.userId?._id?.toString() || ticket.userId?.toString();
+      if (ticketUserId !== req.user.userId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
     }
 
     res.json(ticket);

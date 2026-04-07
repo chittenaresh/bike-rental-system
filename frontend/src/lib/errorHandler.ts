@@ -11,6 +11,18 @@ export interface ApiError extends Error {
   code?: string;
 }
 
+export class AppApiError extends Error implements ApiError {
+  status?: number;
+  code?: string;
+
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = 'AppApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
 /**
  * Safely log errors - only in development
  */
@@ -30,24 +42,21 @@ export function logError(error: unknown, context?: string): void {
  * Handle API errors gracefully
  */
 export function handleApiError(error: unknown): ApiError {
+  if (error instanceof AppApiError) {
+    return error;
+  }
+
   if (error instanceof Error) {
-    // Try to parse error message for status codes
-    const statusMatch = error.message.match(/status of (\d+)/);
+    // Try to parse error message for status codes if it's a generic error
+    const statusMatch = error.message.match(/status (?:of )?(\d+)/i);
     const status = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
     
-    const apiError: ApiError = error;
-    apiError.status = status;
-    
-    // Handle specific error types
-    if (status === 401 || status === 403) {
-      // Authentication/Authorization errors - handled silently
-      return apiError;
-    }
+    const apiError: ApiError = new AppApiError(error.message, status);
     
     return apiError;
   }
   
-  return new Error(String(error)) as ApiError;
+  return new AppApiError(String(error));
 }
 
 /**

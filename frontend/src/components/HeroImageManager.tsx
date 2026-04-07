@@ -169,10 +169,20 @@ export function HeroImageManager() {
                 <div className="flex items-center gap-2">
                    <Label className="text-xs">Order</Label>
                    <Input 
-                     type="number" 
+                     type="text" 
                      className="w-16 h-8 text-xs" 
                      value={image.order}
-                     onChange={(e) => handleOrderChange(image.id, parseInt(e.target.value))}
+                     onChange={(e) => {
+                       const val = e.target.value;
+                       if (/^\d*$/.test(val)) {
+                         handleOrderChange(image.id, parseInt(val) || 0);
+                       }
+                     }}
+                     onKeyDown={(e) => {
+                       if (['e', 'E', '+', '-'].includes(e.key)) {
+                         e.preventDefault();
+                       }
+                     }}
                    />
                 </div>
               </div>
