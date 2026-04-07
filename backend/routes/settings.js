@@ -5,6 +5,18 @@ import SiteSettings from '../models/SiteSettings.js';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'settings');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -67,34 +79,46 @@ router.post('/upload', authenticateToken, requireSuperAdmin, upload.single('file
     const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
     const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 
-    if (!REGION || !BUCKET || !ACCESS_KEY_ID || !SECRET_ACCESS_KEY) {
-      // Fallback for development if S3 is not configured
-      // In a real app, you might save to disk. For now, we return error or a mock URL if strictly dev.
-      // But since we want to be robust, let's just return an error if S3 is missing.
-      return res.status(500).json({ message: 'Storage configuration missing' });
+    const ext = req.file.originalname.split('.').pop() || 'jpg';
+    const fileName = `home-hero-${Date.now()}.${ext}`;
+
+    if (REGION && BUCKET && ACCESS_KEY_ID && SECRET_ACCESS_KEY) {
+      try {
+        const s3 = new S3Client({
+          region: REGION,
+          credentials: {
+            accessKeyId: ACCESS_KEY_ID,
+            secretAccessKey: SECRET_ACCESS_KEY,
+          },
+        });
+
+        const key = `settings/${fileName}`;
+
+        const command = new PutObjectCommand({
+          Bucket: BUCKET,
+          Key: key,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
+        });
+
+        await s3.send(command);
+        const fileUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+        console.log('[SETTINGS UPLOAD] S3 upload successful:', fileUrl);
+        return res.json({ imageUrl: fileUrl });
+      } catch (s3Error) {
+        console.warn('[SETTINGS UPLOAD] S3 upload failed, falling back to local storage:', s3Error.message);
+      }
     }
 
-    const s3 = new S3Client({
-      region: REGION,
-      credentials: {
-        accessKeyId: ACCESS_KEY_ID,
-        secretAccessKey: SECRET_ACCESS_KEY,
-      },
-    });
+    // Fallback: Local Storage
+    const localFilePath = path.join(UPLOADS_DIR, fileName);
+    fs.writeFileSync(localFilePath, req.file.buffer);
 
-    const ext = req.file.originalname.split('.').pop() || 'jpg';
-    const key = `settings/home-hero-${Date.now()}.${ext}`;
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const fileUrl = `${protocol}://${host}/uploads/settings/${fileName}`;
 
-    const command = new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: req.file.buffer,
-      ContentType: req.file.mimetype,
-    });
-
-    await s3.send(command);
-    const fileUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
-
+    console.log('[SETTINGS UPLOAD] Local upload successful:', fileUrl);
     res.json({ imageUrl: fileUrl });
   } catch (error) {
     console.error('Upload error:', error);

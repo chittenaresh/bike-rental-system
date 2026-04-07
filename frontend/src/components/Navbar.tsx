@@ -58,68 +58,63 @@ export const Navbar = memo(function Navbar() {
     };
   }, [mobileMenuOpen]);
 
-  const loadActiveRide = useCallback(async (currentUser: any) => {
-    // Silently handle errors - don't show errors for auth failures
-    const rentals = await safeAsync(
-      () => rentalsAPI.getAll(),
-      [],
-      'loadActiveRide'
-    );
-    
-    if (!rentals || rentals.length === 0) {
-      setActiveRide(null);
-      return;
-    }
-    
-    // Only show active ride button when ride is started (ongoing/active), not when just confirmed
-    const active = rentals.find((r: any) => {
-      const rentalUserId = r.userId || r.user?.id;
-      return (
-        String(rentalUserId || '') === String(currentUser?.id || '') &&
-        (r.status === 'ongoing' || r.status === 'active')
-      );
-    });
-    setActiveRide(active || null);
+  const loadActiveRide = useCallback(
+    async (currentUser: any) => {
+      // Silently handle errors - don't show errors for auth failures
+      const rentals = await safeAsync(() => rentalsAPI.getAll(), [], 'loadActiveRide');
 
-    // Check for ride ending warning (within 30 mins)
-    if (active && active.endTime) {
-      const endTime = new Date(active.endTime).getTime();
-      const now = new Date().getTime();
-      const diffMs = endTime - now;
-      const diffMinutes = diffMs / (1000 * 60);
+      if (!rentals || rentals.length === 0) {
+        setActiveRide(null);
+        return;
+      }
 
-      // Alert if between 0 and 30 minutes remaining
-      if (diffMinutes > 0 && diffMinutes <= 30) {
-        // Create a unique key for this specific warning instance (includes endTime to handle extensions)
-        const alertKey = `ride_warning_${active.id}_${active.endTime}`;
-        const hasAlerted = localStorage.getItem(alertKey);
+      // Only show active ride button when ride is started (ongoing/active), not when just confirmed
+      const active = rentals.find((r: any) => {
+        const rentalUserId = r.userId || r.user?.id;
+        return (
+          String(rentalUserId || '') === String(currentUser?.id || '') &&
+          (r.status === 'ongoing' || r.status === 'active')
+        );
+      });
+      setActiveRide(active || null);
 
-        if (!hasAlerted) {
-          toast({
-            title: "Ride Ending Soon",
-            description: `Your ride ends in ${Math.ceil(diffMinutes)} minutes. Please return the bike to avoid late charges.`,
-            variant: "destructive",
-            duration: 10000,
-          });
-          localStorage.setItem(alertKey, 'true');
+      // Check for ride ending warning (within 30 mins)
+      if (active && active.endTime) {
+        const endTime = new Date(active.endTime).getTime();
+        const now = new Date().getTime();
+        const diffMs = endTime - now;
+        const diffMinutes = diffMs / (1000 * 60);
+
+        // Alert if between 0 and 30 minutes remaining
+        if (diffMinutes > 0 && diffMinutes <= 30) {
+          // Create a unique key for this specific warning instance (includes endTime to handle extensions)
+          const alertKey = `ride_warning_${active.id}_${active.endTime}`;
+          const hasAlerted = localStorage.getItem(alertKey);
+
+          if (!hasAlerted) {
+            toast({
+              title: 'Ride Ending Soon',
+              description: `Your ride ends in ${Math.ceil(diffMinutes)} minutes. Please return the bike to avoid late charges.`,
+              variant: 'destructive',
+              duration: 10000,
+            });
+            localStorage.setItem(alertKey, 'true');
+          }
         }
       }
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
 
   const loadLocations = useCallback(async () => {
-    const data = await safeAsync(
-      () => locationsAPI.getAll(),
-      [],
-      'loadLocations'
-    );
-    
+    const data = await safeAsync(() => locationsAPI.getAll(), [], 'loadLocations');
+
     if (!data || data.length === 0) {
       return;
     }
-    
+
     setLocations(data);
-    
+
     const savedLocation = localStorage.getItem('selectedLocation') || '';
     let nextLocationId = '';
     const ids = new Set(data.map((l) => l.id));
@@ -154,42 +149,45 @@ export const Navbar = memo(function Navbar() {
   useEffect(() => {
     const currentUser = getCurrentUser();
     setUser(currentUser);
-    
+
     // Load locations
     loadLocations();
-    
+
     // Load active ride if user is logged in
     if (currentUser && !['admin', 'superadmin'].includes(currentUser.role)) {
       loadActiveRide(currentUser);
-      
+
       // Refresh active ride status every 30 seconds
       const interval = setInterval(() => {
         loadActiveRide(currentUser);
       }, 30000);
-      
+
       return () => clearInterval(interval);
     }
   }, [location, loadLocations, loadActiveRide]);
 
-  const handleLocationChange = useCallback(async (locationId: string) => {
-    setSelectedLocation(locationId);
-    localStorage.setItem('selectedLocation', locationId);
-    
-    // If user is logged in, try to update their profile location on the backend
-    if (user && user.id) {
-      await safeAsync(
-        () => usersAPI.update(user.id, { currentLocationId: locationId }),
-        null,
-        'updateUserLocation'
-      );
-    }
-    
-    // Reload page to show bikes for new location
-    window.location.reload();
-  }, [user]);
+  const handleLocationChange = useCallback(
+    async (locationId: string) => {
+      setSelectedLocation(locationId);
+      localStorage.setItem('selectedLocation', locationId);
+
+      // If user is logged in, try to update their profile location on the backend
+      if (user && user.id) {
+        await safeAsync(
+          () => usersAPI.update(user.id, { currentLocationId: locationId }),
+          null,
+          'updateUserLocation'
+        );
+      }
+
+      // Reload page to show bikes for new location
+      window.location.reload();
+    },
+    [user]
+  );
 
   const handleLogout = useCallback(() => {
-    if (window.confirm("Are you sure you want to logout?")) {
+    if (window.confirm('Are you sure you want to logout?')) {
       authAPI.logout();
       setUser(null);
       navigate('/');
@@ -199,24 +197,31 @@ export const Navbar = memo(function Navbar() {
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
 
   const isSuperAdmin = user?.role === 'superadmin';
-  
-  const navLinks = useMemo(() => isSuperAdmin
-    ? [
-        { path: '/', label: 'Home' },
-        { path: '/ride-finder', label: 'Ride Finder' },
-        { path: '/dashboard', label: 'Dashboard' },
-      ]
-    : [
-        { path: '/', label: 'Home' },
-        { path: '/garage', label: 'Garage' },
-        { path: '/ride-finder', label: 'Ride Finder' },
-        { path: '/about', label: 'About Us' },
-        { path: '/contact', label: 'Contact Us' },
-        { path: '/faq', label: 'FAQ' },
-        { path: '/terms', label: 'Terms' },
-      ], [isSuperAdmin]);
 
-  const selectedLocationData = useMemo(() => locations.find(loc => loc.id === selectedLocation), [locations, selectedLocation]);
+  const navLinks = useMemo(
+    () =>
+      isSuperAdmin
+        ? [
+            { path: '/', label: 'Home' },
+            { path: '/ride-finder', label: 'Ride Finder' },
+            { path: '/dashboard', label: 'Dashboard' },
+          ]
+        : [
+            { path: '/', label: 'Home' },
+            { path: '/garage', label: 'Garage' },
+            { path: '/ride-finder', label: 'Ride Finder' },
+            { path: '/about', label: 'About Us' },
+            { path: '/contact', label: 'Contact Us' },
+            { path: '/faq', label: 'FAQ' },
+            { path: '/terms', label: 'Terms' },
+          ],
+    [isSuperAdmin]
+  );
+
+  const selectedLocationData = useMemo(
+    () => locations.find((loc) => loc.id === selectedLocation),
+    [locations, selectedLocation]
+  );
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -256,13 +261,18 @@ export const Navbar = memo(function Navbar() {
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 mr-2" />
                       <span className="truncate">
-                        {selectedLocationData ? formatLocationDisplay(selectedLocationData) : 'Select location'}
+                        {selectedLocationData
+                          ? formatLocationDisplay(selectedLocationData)
+                          : 'Select location'}
                       </span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48">
-                  <DropdownMenuRadioGroup value={selectedLocation} onValueChange={handleLocationChange}>
+                  <DropdownMenuRadioGroup
+                    value={selectedLocation}
+                    onValueChange={handleLocationChange}
+                  >
                     {locations.map((loc) => (
                       <DropdownMenuRadioItem key={loc.id} value={loc.id}>
                         {formatLocationDisplay(loc)}
@@ -311,13 +321,16 @@ export const Navbar = memo(function Navbar() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    
+
                     <DropdownMenuSeparator />
 
                     {/* Ongoing Ride */}
                     {user && activeRide && !['admin', 'superadmin'].includes(user.role) && (
                       <DropdownMenuItem asChild>
-                        <Link to="/active-ride" className="flex items-center cursor-pointer w-full justify-between">
+                        <Link
+                          to="/active-ride"
+                          className="flex items-center cursor-pointer w-full justify-between"
+                        >
                           <div className="flex items-center">
                             <Activity className="h-4 w-4 mr-2 text-primary" />
                             Ongoing Ride
@@ -332,7 +345,10 @@ export const Navbar = memo(function Navbar() {
 
                     {/* Dark Mode Toggle */}
                     {mounted && (
-                      <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="cursor-pointer">
+                      <DropdownMenuItem
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        className="cursor-pointer"
+                      >
                         {theme === 'dark' ? (
                           <>
                             <Sun className="h-4 w-4 mr-2" />
@@ -350,13 +366,19 @@ export const Navbar = memo(function Navbar() {
                     <DropdownMenuSeparator />
                     {!isSuperAdmin && (
                       <DropdownMenuItem asChild>
-                        <Link to="/support" className="flex items-center cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50">
+                        <Link
+                          to="/support"
+                          className="flex items-center cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50"
+                        >
                           <Activity className="h-4 w-4 mr-2" />
                           Help & Support
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="text-destructive cursor-pointer"
+                    >
                       <LogOut className="h-4 w-4 mr-2" />
                       Logout
                     </DropdownMenuItem>
@@ -381,15 +403,8 @@ export const Navbar = memo(function Navbar() {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
+          <button className="lg:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
@@ -410,11 +425,15 @@ export const Navbar = memo(function Navbar() {
                   </Button>
                 </Link>
               )}
-              
+
               {/* Support Button for Mobile */}
               {user && !isSuperAdmin && (
                 <Link to="/support" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" size="sm" className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 justify-start">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 justify-start"
+                  >
                     <Activity className="h-4 w-4 mr-2" />
                     Help & Support
                   </Button>
@@ -429,13 +448,18 @@ export const Navbar = memo(function Navbar() {
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 mr-2" />
                         <span className="truncate">
-                          {selectedLocationData ? formatLocationDisplay(selectedLocationData) : 'Select location'}
+                          {selectedLocationData
+                            ? formatLocationDisplay(selectedLocationData)
+                            : 'Select location'}
                         </span>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[calc(100vw-2rem)]">
-                    <DropdownMenuRadioGroup value={selectedLocation} onValueChange={handleLocationChange}>
+                    <DropdownMenuRadioGroup
+                      value={selectedLocation}
+                      onValueChange={handleLocationChange}
+                    >
                       {locations.map((loc) => (
                         <DropdownMenuRadioItem key={loc.id} value={loc.id}>
                           {formatLocationDisplay(loc)}
@@ -452,15 +476,13 @@ export const Navbar = memo(function Navbar() {
                   to={link.path}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`font-medium py-2 transition-colors ${
-                    isActive(link.path)
-                      ? 'text-primary'
-                      : 'text-muted-foreground'
+                    isActive(link.path) ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
                   {link.label}
                 </Link>
               ))}
-              
+
               {/* Dark Mode Toggle for Mobile */}
               {mounted && (
                 <div className="flex items-center justify-between py-2 border-t border-border">
@@ -472,15 +494,11 @@ export const Navbar = memo(function Navbar() {
                     className="w-9 h-9 p-0"
                     aria-label="Toggle dark mode"
                   >
-                    {theme === 'dark' ? (
-                      <Sun className="h-4 w-4" />
-                    ) : (
-                      <Moon className="h-4 w-4" />
-                    )}
+                    {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   </Button>
                 </div>
               )}
-              
+
               <div className="flex gap-3 pt-4 border-t border-border">
                 {user ? (
                   <>

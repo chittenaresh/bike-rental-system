@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,14 +23,11 @@ import {
   Trash2,
   MapPin,
   Shield,
-  Mail,
-  Phone,
   Calendar,
   Moon,
   Sun,
   Maximize2,
   Download,
-  Wrench,
   ZoomIn,
   ZoomOut,
   RotateCcw,
@@ -38,7 +35,16 @@ import {
 import { HeroImageManager } from '@/components/HeroImageManager';
 import { toast } from '@/hooks/use-toast';
 import { SEO } from '@/components/SEO';
-import { bikesAPI, usersAPI, documentsAPI, rentalsAPI, authAPI, getCurrentUser, locationsAPI, settingsAPI, heroImagesAPI } from '@/lib/api';
+import {
+  bikesAPI,
+  usersAPI,
+  documentsAPI,
+  rentalsAPI,
+  authAPI,
+  getCurrentUser,
+  locationsAPI,
+  settingsAPI,
+} from '@/lib/api';
 import { Bike as BikeType } from '@/types';
 import { useTheme } from 'next-themes';
 import {
@@ -48,9 +54,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Navbar } from '@/components/Navbar';
-import { Footer } from '@/components/Footer';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -63,14 +73,81 @@ const statusStyles = {
 };
 
 const PREDEFINED_BIKE_SPECS = [
-  { brand: 'Honda', models: ['Activa 6G', 'Activa 125', 'Dio', 'Shine', 'Unicorn', 'Hornet 2.0', 'Hness CB350', 'CB350RS'] },
-  { brand: 'TVS', models: ['Jupiter', 'iQube', 'Ntorq 125', 'Apache RTR 160', 'Apache RTR 200', 'Raider', 'XL100', 'Ronin'] },
-  { brand: 'Suzuki', models: ['Access 125', 'Burgman Street', 'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'V-Strom SX'] },
-  { brand: 'Yamaha', models: ['Ray ZR 125', 'Fascino 125', 'FZ-S FI', 'MT-15 V2', 'R15 V4', 'Aerox 155', 'FZX'] },
-  { brand: 'Hero', models: ['Splendor Plus', 'HF Deluxe', 'Passion XTEC', 'Glamour', 'Xpulse 200 4V', 'Destini 125', 'Pleasure Plus', 'Vida V1'] },
-  { brand: 'Royal Enfield', models: ['Classic 350', 'Bullet 350', 'Meteor 350', 'Hunter 350', 'Himalayan 450', 'Continental GT 650', 'Interceptor 650'] },
-  { brand: 'Bajaj', models: ['Pulsar 125', 'Pulsar 150', 'Pulsar NS200', 'Dominar 400', 'Chetak', 'Platina', 'Avenger Cruise 220'] },
-  { brand: 'KTM', models: ['Duke 200', 'Duke 250', 'Duke 390', 'RC 200', 'RC 390', 'Adventure 390'] },
+  {
+    brand: 'Honda',
+    models: [
+      'Activa 6G',
+      'Activa 125',
+      'Dio',
+      'Shine',
+      'Unicorn',
+      'Hornet 2.0',
+      'Hness CB350',
+      'CB350RS',
+    ],
+  },
+  {
+    brand: 'TVS',
+    models: [
+      'Jupiter',
+      'iQube',
+      'Ntorq 125',
+      'Apache RTR 160',
+      'Apache RTR 200',
+      'Raider',
+      'XL100',
+      'Ronin',
+    ],
+  },
+  {
+    brand: 'Suzuki',
+    models: ['Access 125', 'Burgman Street', 'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'V-Strom SX'],
+  },
+  {
+    brand: 'Yamaha',
+    models: ['Ray ZR 125', 'Fascino 125', 'FZ-S FI', 'MT-15 V2', 'R15 V4', 'Aerox 155', 'FZX'],
+  },
+  {
+    brand: 'Hero',
+    models: [
+      'Splendor Plus',
+      'HF Deluxe',
+      'Passion XTEC',
+      'Glamour',
+      'Xpulse 200 4V',
+      'Destini 125',
+      'Pleasure Plus',
+      'Vida V1',
+    ],
+  },
+  {
+    brand: 'Royal Enfield',
+    models: [
+      'Classic 350',
+      'Bullet 350',
+      'Meteor 350',
+      'Hunter 350',
+      'Himalayan 450',
+      'Continental GT 650',
+      'Interceptor 650',
+    ],
+  },
+  {
+    brand: 'Bajaj',
+    models: [
+      'Pulsar 125',
+      'Pulsar 150',
+      'Pulsar NS200',
+      'Dominar 400',
+      'Chetak',
+      'Platina',
+      'Avenger Cruise 220',
+    ],
+  },
+  {
+    brand: 'KTM',
+    models: ['Duke 200', 'Duke 250', 'Duke 390', 'RC 200', 'RC 390', 'Adventure 390'],
+  },
   { brand: 'Ola', models: ['S1 Pro', 'S1 Air', 'S1 X'] },
   { brand: 'Ather', models: ['450X', '450S', 'Rizta'] },
 ];
@@ -112,40 +189,49 @@ export default function SuperAdmin() {
   const [rentals, setRentals] = useState<any[]>([]);
   const [allVehiclesSearchQuery, setAllVehiclesSearchQuery] = useState('');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('all');
-  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedDocumentUser, setSelectedDocumentUser] = useState<any>(null);
-  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [homeHeroImageUrl, setHomeHeroImageUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [createAdminOpen, setCreateAdminOpen] = useState(false);
-  const [newAdminForm, setNewAdminForm] = useState({ name: '', email: '', password: '', confirmPassword: '', locationId: '' });
+  const [newAdminForm, setNewAdminForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    locationId: '',
+  });
   const [newAdminCity, setNewAdminCity] = useState<string>('');
   const [newAdminOtherCity, setNewAdminOtherCity] = useState<string>('');
   const [editAdminOpen, setEditAdminOpen] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<any | null>(null);
-  const [editAdminForm, setEditAdminForm] = useState({ name: '', email: '', password: '', confirmPassword: '', locationId: '' });
+  const [editAdminForm, setEditAdminForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    locationId: '',
+  });
   const [editAdminOtherCity, setEditAdminOtherCity] = useState<string>('');
   const [bikeDialogOpen, setBikeDialogOpen] = useState(false);
   const [editingBike, setEditingBike] = useState<any | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-    const [zoomScale, setZoomScale] = useState(1);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [docToReject, setDocToReject] = useState<string | null>(null);
   const [bikeSpecs, setBikeSpecs] = useState<any[]>(PREDEFINED_BIKE_SPECS);
-  const [bikeForm, setBikeForm] = useState<any>({ 
-    name: '', 
-    brand: '', 
-    year: '', 
-    type: 'fuel', 
-    category: 'midrange', 
-    pricePerHour: '', 
-    kmLimit: '', 
-    locationId: '', 
+  const [bikeForm, setBikeForm] = useState<any>({
+    name: '',
+    brand: '',
+    year: '',
+    type: 'fuel',
+    category: 'midrange',
+    pricePerHour: '',
+    kmLimit: '',
+    locationId: '',
     image: '',
     images: ['', '', ''],
     weekdayRate: '',
@@ -153,17 +239,26 @@ export default function SuperAdmin() {
     excessKmCharge: '',
     kmLimitPerHour: '',
     minBookingHours: '',
-    gstPercentage: '18'
+    gstPercentage: '18',
   });
+  const [bikeFormErrors, setBikeFormErrors] = useState<Record<string, string>>({});
 
   const BikeImagePreview = ({ url, label }: { url: string; label: string }) => {
     const [hasError, setHasError] = useState(false);
-    useEffect(() => { setHasError(false); }, [url]);
+    useEffect(() => {
+      setHasError(false);
+    }, [url]);
 
     if (!url) return null;
 
     return (
-      <div className="relative group cursor-pointer w-24 h-24 flex-shrink-0" onClick={() => { setPreviewImageUrl(url); setIsPreviewModalOpen(true); }}>
+      <div
+        className="relative group cursor-pointer w-24 h-24 flex-shrink-0"
+        onClick={() => {
+          setPreviewImageUrl(url);
+          setIsPreviewModalOpen(true);
+        }}
+      >
         <img
           src={url}
           alt={label}
@@ -172,20 +267,27 @@ export default function SuperAdmin() {
         />
         {hasError && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded-lg">
-            <span className="text-[10px] text-destructive font-medium text-center px-1">Failed to load</span>
+            <span className="text-[10px] text-destructive font-medium text-center px-1">
+              Failed to load
+            </span>
           </div>
         )}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-           <div className="bg-black/40 text-white p-1 rounded-full backdrop-blur-sm">
-             <Maximize2 className="h-4 w-4" />
-           </div>
+          <div className="bg-black/40 text-white p-1 rounded-full backdrop-blur-sm">
+            <Maximize2 className="h-4 w-4" />
+          </div>
         </div>
       </div>
     );
   };
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any | null>(null);
-  const [locationForm, setLocationForm] = useState<any>({ name: '', city: '', state: '', country: '' });
+  const [locationForm, setLocationForm] = useState<any>({
+    name: '',
+    city: '',
+    state: '',
+    country: '',
+  });
   const [selectedLocationFilter, setSelectedLocationFilter] = useState<string>('all');
   const [documentsSort, setDocumentsSort] = useState<'newest' | 'oldest'>('newest');
   const [mounted, setMounted] = useState(false);
@@ -195,7 +297,7 @@ export default function SuperAdmin() {
   const handleNumericChange = (field: string, value: string) => {
     if (value === '') {
       setBikeForm({ ...bikeForm, [field]: '' });
-      setNumericErrors(prev => ({ ...prev, [field]: '' }));
+      setNumericErrors((prev) => ({ ...prev, [field]: '' }));
       return;
     }
 
@@ -213,25 +315,25 @@ export default function SuperAdmin() {
     const regex = /^\d*\.?\d*$/;
 
     if (!regex.test(value)) {
-      setNumericErrors(prev => ({ ...prev, [field]: 'Only numbers are allowed' }));
+      setNumericErrors((prev) => ({ ...prev, [field]: 'Only numbers are allowed' }));
       return;
     }
 
     if (config) {
       const digitOnly = value.split('.')[0];
       if (digitOnly.length > config.maxLen) {
-        setNumericErrors(prev => ({ ...prev, [field]: 'Maximum limit exceeded' }));
+        setNumericErrors((prev) => ({ ...prev, [field]: 'Maximum limit exceeded' }));
         return;
       }
       const num = parseFloat(value);
       if (num > config.maxVal) {
-        setNumericErrors(prev => ({ ...prev, [field]: `Max value is ${config.maxVal}` }));
+        setNumericErrors((prev) => ({ ...prev, [field]: `Max value is ${config.maxVal}` }));
         return;
       }
     }
 
     setBikeForm({ ...bikeForm, [field]: value });
-    setNumericErrors(prev => ({ ...prev, [field]: '' }));
+    setNumericErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
   const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -287,7 +389,11 @@ export default function SuperAdmin() {
       : null;
     const goaLoc =
       locations.find((l) => String(l.city || '').toLowerCase() === 'goa') ||
-      locations.find((l) => String(l.name || '').toLowerCase().includes('goa')) ||
+      locations.find((l) =>
+        String(l.name || '')
+          .toLowerCase()
+          .includes('goa')
+      ) ||
       null;
     const goaCity = goaLoc?.city || (goaLoc?.name ? 'Goa' : '') || 'Goa';
     setNewAdminCity((prev) => prev || matchedSavedCity || goaCity);
@@ -305,7 +411,10 @@ export default function SuperAdmin() {
       (l) => String(l.city || '').toLowerCase() === String(newAdminCity || '').toLowerCase()
     );
     if (locationsForCity.length > 0) {
-      setNewAdminForm((prev) => ({ ...prev, locationId: prev.locationId || locationsForCity[0].id }));
+      setNewAdminForm((prev) => ({
+        ...prev,
+        locationId: prev.locationId || locationsForCity[0].id,
+      }));
     }
   }, [createAdminOpen, newAdminCity, locations]);
 
@@ -317,9 +426,9 @@ export default function SuperAdmin() {
     }
     if (user.role !== 'superadmin') {
       toast({
-        title: "Access Denied",
-        description: "Super Admin access required",
-        variant: "destructive",
+        title: 'Access Denied',
+        description: 'Super Admin access required',
+        variant: 'destructive',
       });
       navigate('/dashboard');
       return;
@@ -331,23 +440,26 @@ export default function SuperAdmin() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [bikesData, usersData, docsData, locationsData, rentalsData, settingsData, specsData] = await Promise.all([
-        bikesAPI.getAll(),
-        usersAPI.getAll(),
-        documentsAPI.getAll(),
-        locationsAPI.getAll(true),
-        rentalsAPI.getAll(),
-        settingsAPI.getHomeHero(),
-        bikesAPI.getSpecs().catch(() => []),
-      ]);
+      const [bikesData, usersData, docsData, locationsData, rentalsData, settingsData, specsData] =
+        await Promise.all([
+          bikesAPI.getAll(),
+          usersAPI.getAll(),
+          documentsAPI.getAll(),
+          locationsAPI.getAll(true),
+          rentalsAPI.getAll(),
+          settingsAPI.getHomeHero(),
+          bikesAPI.getSpecs().catch(() => []),
+        ]);
 
       if (specsData) {
         const mergedSpecs = [...PREDEFINED_BIKE_SPECS];
         specsData.forEach((dbSpec: any) => {
-          const existing = mergedSpecs.find(s => s.brand.toLowerCase() === dbSpec.brand.toLowerCase());
+          const existing = mergedSpecs.find(
+            (s) => s.brand.toLowerCase() === dbSpec.brand.toLowerCase()
+          );
           if (existing) {
             dbSpec.models.forEach((m: string) => {
-              if (!existing.models.some(em => em.toLowerCase() === m.toLowerCase())) {
+              if (!existing.models.some((em) => em.toLowerCase() === m.toLowerCase())) {
                 existing.models.push(m);
               }
             });
@@ -370,7 +482,11 @@ export default function SuperAdmin() {
 
       const goaLoc =
         locationsData.find((l: any) => String(l.city || '').toLowerCase() === 'goa') ||
-        locationsData.find((l: any) => String(l.name || '').toLowerCase().includes('goa')) ||
+        locationsData.find((l: any) =>
+          String(l.name || '')
+            .toLowerCase()
+            .includes('goa')
+        ) ||
         null;
 
       if (goaLoc) {
@@ -392,9 +508,9 @@ export default function SuperAdmin() {
       setRentals(rentalsData);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to load admin data",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to load admin data',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -414,9 +530,9 @@ export default function SuperAdmin() {
       }
     } catch (error: any) {
       toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload image",
-        variant: "destructive",
+        title: 'Upload Failed',
+        description: error.message || 'Failed to upload image',
+        variant: 'destructive',
       });
     } finally {
       setUploading(false);
@@ -431,9 +547,9 @@ export default function SuperAdmin() {
       toast({ title: 'Settings Saved', description: 'Home page background updated successfully' });
     } catch (error: any) {
       toast({
-        title: "Save Failed",
-        description: error.message || "Failed to save settings",
-        variant: "destructive",
+        title: 'Save Failed',
+        description: error.message || 'Failed to save settings',
+        variant: 'destructive',
       });
     } finally {
       setUploading(false);
@@ -441,35 +557,35 @@ export default function SuperAdmin() {
   };
 
   const validateEmail = (email: string) => {
-    if (!email) return "Email is required";
-    if (email.length > 100) return "Email must not exceed 100 characters";
+    if (!email) return 'Email is required';
+    if (email.length > 100) return 'Email must not exceed 100 characters';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
     return null;
   };
 
   const validateName = (name: string) => {
-    if (!name.trim()) return "Full name is required";
-    if (name.length > 50) return "Full name must not exceed 50 characters";
-    if (!/^[a-zA-Z\s]+$/.test(name)) return "Full name must contain only alphabets and spaces";
+    if (!name.trim()) return 'Full name is required';
+    if (name.length > 50) return 'Full name must not exceed 50 characters';
+    if (!/^[a-zA-Z\s]+$/.test(name)) return 'Full name must contain only alphabets and spaces';
     return null;
   };
 
   const validatePassword = (password: string) => {
-    if (!password) return "Password is required";
-    if (password.length < 8) return "Password must be at least 8 characters long";
+    if (!password) return 'Password is required';
+    if (password.length < 8) return 'Password must be at least 8 characters long';
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-      return "Password must include uppercase, lowercase, number, and special characters";
+      return 'Password must include uppercase, lowercase, number, and special characters';
     }
     return null;
   };
 
   const handleLogout = () => {
-    if (window.confirm("Are you sure you want to logout?")) {
+    if (window.confirm('Are you sure you want to logout?')) {
       authAPI.logout();
       navigate('/');
     }
@@ -501,25 +617,30 @@ export default function SuperAdmin() {
     return user.locationId;
   };
 
-  const filteredBikes = selectedLocationFilter === 'all' 
-    ? bikes 
-    : bikes.filter(b => getBikeLocationId(b) === selectedLocationFilter);
+  const filteredBikes =
+    selectedLocationFilter === 'all'
+      ? bikes
+      : bikes.filter((b) => getBikeLocationId(b) === selectedLocationFilter);
 
-  const bikesById: Record<string, BikeType> = Object.fromEntries(filteredBikes.map(b => [b.id, b]));
-  
-  const filteredRentals = selectedLocationFilter === 'all'
-    ? rentals
-    : rentals.filter(r => {
-        const bike = bikes.find(b => b.id === r.bikeId);
-        return bike && getBikeLocationId(bike) === selectedLocationFilter;
-      });
+  const filteredRentals =
+    selectedLocationFilter === 'all'
+      ? rentals
+      : rentals.filter((r) => {
+          const bike = bikes.find((b) => b.id === r.bikeId);
+          return bike && getBikeLocationId(bike) === selectedLocationFilter;
+        });
 
   // Users are global - show only regular users
   const filteredUsers = users
     .filter((u) => u.role === 'user')
-    .filter((u) =>
-      String(u.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      String(u.email || '').toLowerCase().includes(searchQuery.toLowerCase())
+    .filter(
+      (u) =>
+        String(u.name || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(u.email || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       const ta = new Date(a.createdAt as any).getTime();
@@ -546,8 +667,8 @@ export default function SuperAdmin() {
       .filter(Boolean)
   );
 
-  const cityOptions = Array.from(new Set(locations.map((l) => l.city).filter(Boolean))).sort((a, b) =>
-    String(a).localeCompare(String(b))
+  const cityOptions = Array.from(new Set(locations.map((l) => l.city).filter(Boolean))).sort(
+    (a, b) => String(a).localeCompare(String(b))
   );
 
   const handleDocumentAction = async (docId: string, action: 'approve' | 'reject') => {
@@ -563,10 +684,10 @@ export default function SuperAdmin() {
       toast({ title: 'Updated', description: `Document approved` });
       loadData();
     } catch (error: any) {
-      toast({ 
-        title: 'Error', 
+      toast({
+        title: 'Error',
         description: error.message || `Failed to approve document`,
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
@@ -575,9 +696,9 @@ export default function SuperAdmin() {
     if (!docToReject) return;
     if (!rejectionReason.trim()) {
       toast({
-        title: "Reason Required",
-        description: "Please enter a reason for rejection",
-        variant: "destructive",
+        title: 'Reason Required',
+        description: 'Please enter a reason for rejection',
+        variant: 'destructive',
       });
       return;
     }
@@ -585,7 +706,7 @@ export default function SuperAdmin() {
     try {
       await documentsAPI.updateStatus(docToReject, 'rejected', rejectionReason);
       toast({
-        title: "Document Rejected",
+        title: 'Document Rejected',
         description: 'Document status updated successfully.',
       });
       setIsRejectionModalOpen(false);
@@ -594,9 +715,9 @@ export default function SuperAdmin() {
       loadData();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to reject document",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to reject document',
+        variant: 'destructive',
       });
     }
   };
@@ -604,42 +725,34 @@ export default function SuperAdmin() {
   const handleViewUserDocuments = async (userId: string) => {
     try {
       const freshUser = await usersAPI.getById(userId);
-      const userDocs = documents.filter(d => d.userId === userId);
+      const userDocs = documents.filter((d) => d.userId === userId);
       const userRentals = rentals
-        .filter(r => r.userId === userId)
+        .filter((r) => r.userId === userId)
         .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
       setSelectedDocumentUser({ ...freshUser, documents: userDocs, rentals: userRentals });
       setIsDocumentDialogOpen(true);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to load user",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to load user',
+        variant: 'destructive',
       });
     }
   };
 
   const handleVerifyUser = async (userId: string, status: boolean = true) => {
     await usersAPI.update(userId, { isVerified: status });
-    toast({ 
-      title: status ? 'User Verified' : 'User Unverified', 
-      description: `User has been marked as ${status ? 'verified' : 'unverified'}` 
+    toast({
+      title: status ? 'User Verified' : 'User Unverified',
+      description: `User has been marked as ${status ? 'verified' : 'unverified'}`,
     });
     loadData();
   };
-  
-  const rentalsActive = filteredRentals.filter((r) => r.status === 'active' || r.status === 'ongoing');
+
+  const rentalsActive = filteredRentals.filter(
+    (r) => r.status === 'active' || r.status === 'ongoing'
+  );
   const uniqueModelNames = Array.from(new Set(filteredBikes.map((b) => b.name)));
-  const revenueByPeriod = (days: number) => {
-    const now = Date.now();
-    const cutoff = now - days * 24 * 60 * 60 * 1000;
-    return filteredRentals
-      .filter((r) => r.totalCost && new Date(r.endTime || r.startTime).getTime() >= cutoff)
-      .reduce((sum, r) => sum + (r.totalCost || 0), 0);
-  };
-  const revenueDaily = revenueByPeriod(1);
-  const revenueWeekly = revenueByPeriod(7);
-  const revenueMonthly = revenueByPeriod(30);
 
   if (!currentUser) {
     return null;
@@ -647,7 +760,7 @@ export default function SuperAdmin() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      <SEO 
+      <SEO
         title="Super Admin Dashboard"
         description="Global management of the RideFlow platform."
         noindex={true}
@@ -661,7 +774,9 @@ export default function SuperAdmin() {
           </div>
           <div>
             <span className="font-display font-bold">RideFlow</span>
-            <Badge variant="secondary" className="ml-2 text-xs">Super Admin</Badge>
+            <Badge variant="secondary" className="ml-2 text-xs">
+              Super Admin
+            </Badge>
           </div>
         </div>
 
@@ -706,7 +821,11 @@ export default function SuperAdmin() {
               )}
             </Button>
           )}
-          <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground" onClick={handleLogout}>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 text-muted-foreground"
+            onClick={handleLogout}
+          >
             <LogOut className="h-5 w-5" />
             Logout
           </Button>
@@ -730,7 +849,9 @@ export default function SuperAdmin() {
                   </div>
                   <div>
                     <span className="font-display font-bold">RideFlow</span>
-                    <Badge variant="secondary" className="ml-2 text-xs">Super Admin</Badge>
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      Super Admin
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -780,7 +901,11 @@ export default function SuperAdmin() {
                   </SheetClose>
                 )}
                 <SheetClose asChild>
-                  <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground" onClick={handleLogout}>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-muted-foreground"
+                    onClick={handleLogout}
+                  >
                     <LogOut className="h-5 w-5" />
                     Logout
                   </Button>
@@ -810,16 +935,21 @@ export default function SuperAdmin() {
                   <SelectContent>
                     <SelectItem value="all">All Locations</SelectItem>
                     {locations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>{formatLocationDisplay(loc)}</SelectItem>
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {formatLocationDisplay(loc)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              {selectedLocationFilter !== 'all' && locations.find(loc => loc.id === selectedLocationFilter) && (
-                <Badge variant="secondary" className="md:ml-2 w-fit">
-                  {formatLocationDisplay(locations.find(loc => loc.id === selectedLocationFilter))}
-                </Badge>
-              )}
+              {selectedLocationFilter !== 'all' &&
+                locations.find((loc) => loc.id === selectedLocationFilter) && (
+                  <Badge variant="secondary" className="md:ml-2 w-fit">
+                    {formatLocationDisplay(
+                      locations.find((loc) => loc.id === selectedLocationFilter)
+                    )}
+                  </Badge>
+                )}
             </div>
           </div>
         )}
@@ -829,24 +959,51 @@ export default function SuperAdmin() {
             <div>
               <h1 className="text-2xl font-display font-bold mb-2">Super Admin Dashboard</h1>
               <p className="text-muted-foreground">
-                {selectedLocationFilter === 'all' 
-                  ? 'Global view across all cities and garages.' 
-                  : `View for ${formatLocationDisplay(locations.find(loc => loc.id === selectedLocationFilter)) || 'selected location'}.`}
+                {selectedLocationFilter === 'all'
+                  ? 'Global view across all cities and garages.'
+                  : `View for ${formatLocationDisplay(locations.find((loc) => loc.id === selectedLocationFilter)) || 'selected location'}.`}
               </p>
             </div>
 
             {/* Stats */}
             <div className="grid md:grid-cols-4 gap-4">
               {[
-                { label: 'Cities', value: selectedLocationFilter === 'all' ? locations.length : 1, icon: MapPin, color: 'bg-accent' },
-                { label: 'Bike Models', value: uniqueModelNames.length, icon: Bike, color: 'bg-secondary' },
-                { label: 'Fleet Inventory', value: filteredBikes.length, icon: Bike, color: 'gradient-hero' },
-                { label: 'Active Bookings', value: rentalsActive.length, icon: Calendar, color: 'bg-primary' },
-                { label: 'Registered Users', value: filteredUsers.length, icon: Users, color: 'bg-secondary' },
+                {
+                  label: 'Cities',
+                  value: selectedLocationFilter === 'all' ? locations.length : 1,
+                  icon: MapPin,
+                  color: 'bg-accent',
+                },
+                {
+                  label: 'Bike Models',
+                  value: uniqueModelNames.length,
+                  icon: Bike,
+                  color: 'bg-secondary',
+                },
+                {
+                  label: 'Fleet Inventory',
+                  value: filteredBikes.length,
+                  icon: Bike,
+                  color: 'gradient-hero',
+                },
+                {
+                  label: 'Active Bookings',
+                  value: rentalsActive.length,
+                  icon: Calendar,
+                  color: 'bg-primary',
+                },
+                {
+                  label: 'Registered Users',
+                  value: filteredUsers.length,
+                  icon: Users,
+                  color: 'bg-secondary',
+                },
               ].map((stat) => (
                 <div key={stat.label} className="bg-card rounded-2xl shadow-card p-6">
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}>
+                    <div
+                      className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}
+                    >
                       <stat.icon className="h-6 w-6 text-primary-foreground" />
                     </div>
                     <div>
@@ -866,24 +1023,30 @@ export default function SuperAdmin() {
               <div>
                 <h1 className="text-xl sm:text-2xl font-display font-bold mb-2">Vehicles</h1>
                 <p className="text-muted-foreground">
-                  Add, edit, or remove vehicles from {selectedLocationFilter !== 'all' && locations.find(loc => loc.id === selectedLocationFilter) 
-                    ? formatLocationDisplay(locations.find(loc => loc.id === selectedLocationFilter)) 
-                    : 'all locations'}.
+                  Add, edit, or remove vehicles from{' '}
+                  {selectedLocationFilter !== 'all' &&
+                  locations.find((loc) => loc.id === selectedLocationFilter)
+                    ? formatLocationDisplay(
+                        locations.find((loc) => loc.id === selectedLocationFilter)
+                      )
+                    : 'all locations'}
+                  .
                 </p>
               </div>
               <Button
                 className="w-full sm:w-auto"
                 onClick={() => {
                   setEditingBike(null);
-                  setBikeForm({ 
-                    name: '', 
-                    brand: '', 
+                  setBikeFormErrors({});
+                  setBikeForm({
+                    name: '',
+                    brand: '',
                     year: '',
-                    type: 'fuel', 
-                    category: 'midrange', 
-                    pricePerHour: '', 
-                    kmLimit: '', 
-                    locationId: '', 
+                    type: 'fuel',
+                    category: 'midrange',
+                    pricePerHour: '',
+                    kmLimit: '',
+                    locationId: '',
                     image: '',
                     images: ['', '', ''],
                     weekdayRate: '',
@@ -891,7 +1054,7 @@ export default function SuperAdmin() {
                     excessKmCharge: '',
                     kmLimitPerHour: '',
                     minBookingHours: '',
-                    gstPercentage: '18'
+                    gstPercentage: '18',
                   });
                   setBikeDialogOpen(true);
                 }}
@@ -905,8 +1068,8 @@ export default function SuperAdmin() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="w-full flex items-center gap-2 sm:flex-1">
                     <Search className="h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search vehicles..." 
+                    <Input
+                      placeholder="Search vehicles..."
                       value={allVehiclesSearchQuery}
                       onChange={(e) => setAllVehiclesSearchQuery(e.target.value)}
                     />
@@ -917,10 +1080,14 @@ export default function SuperAdmin() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Brands</SelectItem>
-                      {Array.from(new Set(filteredBikes.map((b) => ((b.brand || '').trim() || 'Unbranded'))))
+                      {Array.from(
+                        new Set(filteredBikes.map((b) => (b.brand || '').trim() || 'Unbranded'))
+                      )
                         .sort()
                         .map((brand) => (
-                          <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                          <SelectItem key={brand} value={brand}>
+                            {brand}
+                          </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
@@ -929,91 +1096,133 @@ export default function SuperAdmin() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-4">
                 {filteredBikes
                   .filter((bike) => {
-                    const matchesSearch = allVehiclesSearchQuery === '' || 
+                    const matchesSearch =
+                      allVehiclesSearchQuery === '' ||
                       bike.name.toLowerCase().includes(allVehiclesSearchQuery.toLowerCase()) ||
-                      (bike.brand && bike.brand.toLowerCase().includes(allVehiclesSearchQuery.toLowerCase()));
-                    const matchesBrand = selectedBrandFilter === 'all' || 
+                      (bike.brand &&
+                        bike.brand.toLowerCase().includes(allVehiclesSearchQuery.toLowerCase())) ||
+                      (bike.year &&
+                        String(bike.year)
+                          .toLowerCase()
+                          .includes(allVehiclesSearchQuery.toLowerCase()));
+                    const matchesBrand =
+                      selectedBrandFilter === 'all' ||
                       ((bike.brand || '').trim() || 'Unbranded') === selectedBrandFilter;
                     return matchesSearch && matchesBrand;
                   })
                   .map((bike) => (
-                  <div key={bike.id} className="border rounded-lg p-2 sm:p-3 flex flex-col bg-card h-full min-w-0">
-                    {bike.image && (
-                      <div className="relative mb-2 h-32 sm:h-40 md:h-48 bg-muted rounded-md overflow-hidden flex items-center justify-center flex-shrink-0">
-                        <img 
-                          src={bike.image} 
-                          alt={bike.name} 
-                          className="max-w-full max-h-full object-contain rounded-md"
-                          style={{ imageRendering: 'auto' as const }}
-                        />
-                        <Badge variant="secondary" className="absolute top-2 right-2 text-xs">{bike.type}</Badge>
-                      </div>
-                    )}
-                    {!bike.image && (
-                      <div className="relative mb-2 bg-muted rounded-md h-32 sm:h-40 md:h-48 flex items-center justify-center flex-shrink-0">
-                        <Badge variant="secondary" className="absolute top-2 right-2 text-xs">{bike.type}</Badge>
-                        <Bike className="h-12 w-12 text-muted-foreground/50" />
-                      </div>
-                    )}
-                    <div className="flex-1 flex flex-col min-w-0">
-                      <p className="font-medium mb-1 whitespace-normal">{bike.name}</p>
-                      {(bike.brand || bike.year) && (
-                        <p className="text-xs text-muted-foreground mb-2 truncate">
-                          {[bike.brand ? `Brand: ${bike.brand}` : '', bike.year ? `Year: ${bike.year}` : ''].filter(Boolean).join(' • ')}
-                        </p>
+                    <div
+                      key={bike.id}
+                      className="border rounded-lg p-2 sm:p-3 flex flex-col bg-card h-full min-w-0"
+                    >
+                      {bike.image && (
+                        <div className="relative mb-2 h-32 sm:h-40 md:h-48 bg-muted rounded-md overflow-hidden flex items-center justify-center flex-shrink-0">
+                          <img
+                            src={bike.image}
+                            alt={bike.name}
+                            className="max-w-full max-h-full object-contain rounded-md"
+                            style={{ imageRendering: 'auto' as const }}
+                          />
+                          <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
+                            {bike.type}
+                          </Badge>
+                        </div>
                       )}
-                      <div className="mt-auto flex items-center justify-between pt-2 gap-2">
-                        <p className="text-sm font-semibold text-foreground whitespace-nowrap">₹{bike.weekdayRate || bike.pricePerHour || Math.round((bike.price12Hours || 0) / 12)}/hr</p>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => {
-                              setEditingBike(bike);
-                              setBikeForm({
-                                name: bike.name,
-                                brand: bike.brand || '',
-                                year: bike.year ? String(bike.year) : '',
-                                type: bike.type,
-                                category: bike.category || 'midrange',
-                                pricePerHour: String(bike.pricePerHour),
-                                kmLimit: String(bike.kmLimit),
-                                locationId: bike.locationId,
-                                image: bike.image || '',
-                                images: bike.images && bike.images.length > 0 ? [...bike.images, '', '', ''].slice(0, 3) : ['', '', ''],
-                                weekdayRate: bike.weekdayRate ? String(bike.weekdayRate) : '',
-                                weekendRate: bike.weekendRate ? String(bike.weekendRate) : '',
-                                excessKmCharge: bike.excessKmCharge ? String(bike.excessKmCharge) : '',
-                                kmLimitPerHour: bike.kmLimitPerHour ? String(bike.kmLimitPerHour) : '',
-                                minBookingHours: bike.minBookingHours ? String(bike.minBookingHours) : '',
-                                gstPercentage: bike.gstPercentage !== undefined && bike.gstPercentage !== null ? String(bike.gstPercentage) : '18',
-                              });
-                              setBikeDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="h-7 px-2 text-xs"
-                            onClick={async () => {
-                              try {
-                                await bikesAPI.delete(bike.id);
-                                toast({ title: 'Vehicle deleted' });
-                                loadData();
-                              } catch (e: any) {
-                                toast({ title: 'Error', description: e.message || 'Failed to delete vehicle', variant: 'destructive' });
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                      {!bike.image && (
+                        <div className="relative mb-2 bg-muted rounded-md h-32 sm:h-40 md:h-48 flex items-center justify-center flex-shrink-0">
+                          <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
+                            {bike.type}
+                          </Badge>
+                          <Bike className="h-12 w-12 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      <div className="flex-1 flex flex-col min-w-0">
+                        <p className="font-medium mb-1 whitespace-normal">{bike.name}</p>
+                        {(bike.brand || bike.year) && (
+                          <p className="text-xs text-muted-foreground mb-2 truncate">
+                            {[
+                              bike.brand ? `Brand: ${bike.brand}` : '',
+                              bike.year ? `Year: ${bike.year}` : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' • ')}
+                          </p>
+                        )}
+                        <div className="mt-auto flex items-center justify-between pt-2 gap-2">
+                          <p className="text-sm font-semibold text-foreground whitespace-nowrap">
+                            ₹
+                            {bike.weekdayRate ||
+                              bike.pricePerHour ||
+                              Math.round((bike.price12Hours || 0) / 12)}
+                            /hr
+                          </p>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                setEditingBike(bike);
+                                setBikeFormErrors({});
+                                setBikeForm({
+                                  name: bike.name,
+                                  brand: bike.brand || '',
+                                  year: bike.year ? String(bike.year) : '',
+                                  type: bike.type,
+                                  category: bike.category || 'midrange',
+                                  pricePerHour: String(bike.pricePerHour),
+                                  kmLimit: String(bike.kmLimit),
+                                  locationId: bike.locationId,
+                                  image: bike.image || '',
+                                  images:
+                                    bike.images && bike.images.length > 0
+                                      ? [...bike.images, '', '', ''].slice(0, 3)
+                                      : ['', '', ''],
+                                  weekdayRate: bike.weekdayRate ? String(bike.weekdayRate) : '',
+                                  weekendRate: bike.weekendRate ? String(bike.weekendRate) : '',
+                                  excessKmCharge: bike.excessKmCharge
+                                    ? String(bike.excessKmCharge)
+                                    : '',
+                                  kmLimitPerHour: bike.kmLimitPerHour
+                                    ? String(bike.kmLimitPerHour)
+                                    : '',
+                                  minBookingHours: bike.minBookingHours
+                                    ? String(bike.minBookingHours)
+                                    : '',
+                                  gstPercentage:
+                                    bike.gstPercentage !== undefined && bike.gstPercentage !== null
+                                      ? String(bike.gstPercentage)
+                                      : '18',
+                                });
+                                setBikeDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 px-2 text-xs"
+                              onClick={async () => {
+                                try {
+                                  await bikesAPI.delete(bike.id);
+                                  toast({ title: 'Vehicle deleted' });
+                                  loadData();
+                                } catch (e: any) {
+                                  toast({
+                                    title: 'Error',
+                                    description: e.message || 'Failed to delete vehicle',
+                                    variant: 'destructive',
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                   ))}
               </div>
             </div>
@@ -1021,7 +1230,8 @@ export default function SuperAdmin() {
             <div className="bg-card rounded-2xl shadow-card p-6">
               <h2 className="font-display font-semibold text-lg mb-4">Hero Carousel Images</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                Manage images for the home page slider. These images will take precedence over the static background image above.
+                Manage images for the home page slider. These images will take precedence over the
+                static background image above.
               </p>
               <HeroImageManager />
             </div>
@@ -1038,7 +1248,13 @@ export default function SuperAdmin() {
               <Button
                 className="w-full sm:w-auto"
                 onClick={() => {
-                  setNewAdminForm({ name: '', email: '', password: '', confirmPassword: '', locationId: '' });
+                  setNewAdminForm({
+                    name: '',
+                    email: '',
+                    password: '',
+                    confirmPassword: '',
+                    locationId: '',
+                  });
                   setNewAdminCity('');
                   setNewAdminOtherCity('');
                   setCreateAdminOpen(true);
@@ -1063,52 +1279,60 @@ export default function SuperAdmin() {
                       const userLocationId = getUserLocationId(u);
                       const loc = locations.find((l) => l.id === userLocationId);
                       return (
-                      <tr key={u.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">{u.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{loc ? formatLocationDisplay(loc) : '—'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditingAdmin(u);
-                                setEditAdminForm({
-                                  name: u.name || '',
-                                  email: u.email || '',
-                                  password: '',
-                                  confirmPassword: '',
-                                  locationId: userLocationId || '',
-                                });
-                                setEditAdminOtherCity('');
-                                setEditAdminOpen(true);
-                              }}
-                            >
-                              <Edit className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={async () => {
-                                const ok = window.confirm('Delete this admin? This cannot be undone.');
-                                if (!ok) return;
-                                try {
-                                  await usersAPI.delete(u.id);
-                                  toast({ title: 'Admin deleted' });
-                                  loadData();
-                                } catch (e: any) {
-                                  toast({ title: 'Error', description: e.message || 'Failed to delete admin', variant: 'destructive' });
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                        <tr key={u.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">{u.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {loc ? formatLocationDisplay(loc) : '—'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingAdmin(u);
+                                  setEditAdminForm({
+                                    name: u.name || '',
+                                    email: u.email || '',
+                                    password: '',
+                                    confirmPassword: '',
+                                    locationId: userLocationId || '',
+                                  });
+                                  setEditAdminOtherCity('');
+                                  setEditAdminOpen(true);
+                                }}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={async () => {
+                                  const ok = window.confirm(
+                                    'Delete this admin? This cannot be undone.'
+                                  );
+                                  if (!ok) return;
+                                  try {
+                                    await usersAPI.delete(u.id);
+                                    toast({ title: 'Admin deleted' });
+                                    loadData();
+                                  } catch (e: any) {
+                                    toast({
+                                      title: 'Error',
+                                      description: e.message || 'Failed to delete admin',
+                                      variant: 'destructive',
+                                    });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
@@ -1122,9 +1346,9 @@ export default function SuperAdmin() {
                   <DialogDescription>Provision a new admin account.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
-                  <Input 
-                    placeholder="Full Name" 
-                    value={newAdminForm.name} 
+                  <Input
+                    placeholder="Full Name"
+                    value={newAdminForm.name}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (/^[a-zA-Z\s]*$/.test(value) && value.length <= 50) {
@@ -1133,18 +1357,30 @@ export default function SuperAdmin() {
                     }}
                     maxLength={50}
                   />
-                  <Input 
-                    placeholder="Email" 
-                    value={newAdminForm.email} 
-                    onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value.toLowerCase().trim() })} 
-                    maxLength={100} 
+                  <Input
+                    placeholder="Email"
+                    value={newAdminForm.email}
+                    onChange={(e) =>
+                      setNewAdminForm({
+                        ...newAdminForm,
+                        email: e.target.value.toLowerCase().trim(),
+                      })
+                    }
+                    maxLength={100}
                   />
-                  <Input type="password" placeholder="Password" value={newAdminForm.password} onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })} />
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={newAdminForm.password}
+                    onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
+                  />
                   <Input
                     type="password"
                     placeholder="Confirm Password"
                     value={newAdminForm.confirmPassword}
-                    onChange={(e) => setNewAdminForm({ ...newAdminForm, confirmPassword: e.target.value })}
+                    onChange={(e) =>
+                      setNewAdminForm({ ...newAdminForm, confirmPassword: e.target.value })
+                    }
                   />
                   <Select
                     value={newAdminCity}
@@ -1154,7 +1390,9 @@ export default function SuperAdmin() {
                       setNewAdminForm((prev) => ({ ...prev, locationId: '' }));
                     }}
                   >
-                    <SelectTrigger><SelectValue placeholder="City" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="City" />
+                    </SelectTrigger>
                     <SelectContent>
                       {cityOptions.map((city) => (
                         <SelectItem
@@ -1175,11 +1413,20 @@ export default function SuperAdmin() {
                       onChange={(e) => setNewAdminOtherCity(e.target.value)}
                     />
                   ) : (
-                    <Select value={newAdminForm.locationId} onValueChange={(v) => setNewAdminForm({ ...newAdminForm, locationId: v })}>
-                      <SelectTrigger><SelectValue placeholder="Garage" /></SelectTrigger>
+                    <Select
+                      value={newAdminForm.locationId}
+                      onValueChange={(v) => setNewAdminForm({ ...newAdminForm, locationId: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Garage" />
+                      </SelectTrigger>
                       <SelectContent>
                         {locations
-                          .filter((loc) => String(loc.city || '').toLowerCase() === String(newAdminCity || '').toLowerCase())
+                          .filter(
+                            (loc) =>
+                              String(loc.city || '').toLowerCase() ===
+                              String(newAdminCity || '').toLowerCase()
+                          )
                           .map((loc) => (
                             <SelectItem key={loc.id} value={loc.id}>
                               {formatLocationDisplay(loc)}
@@ -1198,7 +1445,10 @@ export default function SuperAdmin() {
                           if (!newAdminForm.password) missingFields.push('password');
 
                           if (missingFields.length > 0) {
-                            const message = missingFields.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ') + 
+                            const message =
+                              missingFields
+                                .map((f) => f.charAt(0).toUpperCase() + f.slice(1))
+                                .join(', ') +
                               (missingFields.length > 1 ? ' are required' : ' is required');
                             toast({ title: 'Error', description: message, variant: 'destructive' });
                             return;
@@ -1207,28 +1457,46 @@ export default function SuperAdmin() {
                           // If all filled, validate format/strength
                           const nameError = validateName(newAdminForm.name);
                           if (nameError) {
-                            toast({ title: 'Validation Error', description: nameError, variant: 'destructive' });
+                            toast({
+                              title: 'Validation Error',
+                              description: nameError,
+                              variant: 'destructive',
+                            });
                             return;
                           }
 
                           const emailError = validateEmail(newAdminForm.email);
                           if (emailError) {
-                            toast({ title: 'Validation Error', description: emailError, variant: 'destructive' });
+                            toast({
+                              title: 'Validation Error',
+                              description: emailError,
+                              variant: 'destructive',
+                            });
                             return;
                           }
 
                           const passwordError = validatePassword(newAdminForm.password);
                           if (passwordError) {
-                            toast({ title: 'Validation Error', description: passwordError, variant: 'destructive' });
+                            toast({
+                              title: 'Validation Error',
+                              description: passwordError,
+                              variant: 'destructive',
+                            });
                             return;
                           }
 
                           if (newAdminForm.password !== newAdminForm.confirmPassword) {
-                            toast({ title: 'Validation Error', description: 'Passwords do not match', variant: 'destructive' });
+                            toast({
+                              title: 'Validation Error',
+                              description: 'Passwords do not match',
+                              variant: 'destructive',
+                            });
                             return;
                           }
                           const targetCityRaw =
-                            newAdminCity === '__other__' ? newAdminOtherCity.trim() : String(newAdminCity || '').trim();
+                            newAdminCity === '__other__'
+                              ? newAdminOtherCity.trim()
+                              : String(newAdminCity || '').trim();
                           if (!targetCityRaw) throw new Error('City is required');
                           const targetCity = targetCityRaw.toLowerCase();
                           if (adminCitySet.has(targetCity)) {
@@ -1262,19 +1530,28 @@ export default function SuperAdmin() {
                             locationId,
                           });
                           localStorage.setItem(LAST_ADMIN_CITY_STORAGE_KEY, targetCityRaw);
-                          toast({ title: 'Admin Created', description: 'New admin has been created' });
+                          toast({
+                            title: 'Admin Created',
+                            description: 'New admin has been created',
+                          });
                           setCreateAdminOpen(false);
                           setNewAdminCity('');
                           setNewAdminOtherCity('');
                           loadData();
                         } catch (e: any) {
-                          toast({ title: 'Error', description: e.message || 'Failed to create admin', variant: 'destructive' });
+                          toast({
+                            title: 'Error',
+                            description: e.message || 'Failed to create admin',
+                            variant: 'destructive',
+                          });
                         }
                       }}
                     >
                       Create
                     </Button>
-                    <Button variant="outline" onClick={() => setCreateAdminOpen(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setCreateAdminOpen(false)}>
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
@@ -1287,7 +1564,13 @@ export default function SuperAdmin() {
                 if (!open) {
                   setEditingAdmin(null);
                   // Reset form when dialog closes
-                  setEditAdminForm({ name: '', email: '', password: '', confirmPassword: '', locationId: '' });
+                  setEditAdminForm({
+                    name: '',
+                    email: '',
+                    password: '',
+                    confirmPassword: '',
+                    locationId: '',
+                  });
                 }
               }}
             >
@@ -1297,25 +1580,38 @@ export default function SuperAdmin() {
                   <DialogDescription>Update admin account details.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
-                  <Input placeholder="Full Name" value={editAdminForm.name} onChange={(e) => setEditAdminForm({ ...editAdminForm, name: e.target.value })} />
-                  <Input 
-                    placeholder="Email" 
-                    value={editAdminForm.email} 
-                    onChange={(e) => setEditAdminForm({ ...editAdminForm, email: e.target.value.toLowerCase().trim() })} 
-                    maxLength={100} 
+                  <Input
+                    placeholder="Full Name"
+                    value={editAdminForm.name}
+                    onChange={(e) => setEditAdminForm({ ...editAdminForm, name: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Email"
+                    value={editAdminForm.email}
+                    onChange={(e) =>
+                      setEditAdminForm({
+                        ...editAdminForm,
+                        email: e.target.value.toLowerCase().trim(),
+                      })
+                    }
+                    maxLength={100}
                   />
                   <Input
                     type="password"
                     placeholder="New Password"
                     value={editAdminForm.password}
-                    onChange={(e) => setEditAdminForm({ ...editAdminForm, password: e.target.value })}
+                    onChange={(e) =>
+                      setEditAdminForm({ ...editAdminForm, password: e.target.value })
+                    }
                   />
                   {editAdminForm.password && (
                     <Input
                       type="password"
                       placeholder="Confirm Password"
                       value={editAdminForm.confirmPassword}
-                      onChange={(e) => setEditAdminForm({ ...editAdminForm, confirmPassword: e.target.value })}
+                      onChange={(e) =>
+                        setEditAdminForm({ ...editAdminForm, confirmPassword: e.target.value })
+                      }
                     />
                   )}
                   <Select
@@ -1327,7 +1623,9 @@ export default function SuperAdmin() {
                       }
                     }}
                   >
-                    <SelectTrigger><SelectValue placeholder="Assign City/Garage" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Assign City/Garage" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__other__">Other (Add new location)</SelectItem>
                       {locations.map((loc) => (
@@ -1354,7 +1652,10 @@ export default function SuperAdmin() {
                           if (!editAdminForm.email) missingFields.push('email');
 
                           if (missingFields.length > 0) {
-                            const message = missingFields.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ') + 
+                            const message =
+                              missingFields
+                                .map((f) => f.charAt(0).toUpperCase() + f.slice(1))
+                                .join(', ') +
                               (missingFields.length > 1 ? ' are required' : ' is required');
                             toast({ title: 'Error', description: message, variant: 'destructive' });
                             return;
@@ -1362,13 +1663,21 @@ export default function SuperAdmin() {
 
                           const nameError = validateName(editAdminForm.name);
                           if (nameError) {
-                            toast({ title: 'Validation Error', description: nameError, variant: 'destructive' });
+                            toast({
+                              title: 'Validation Error',
+                              description: nameError,
+                              variant: 'destructive',
+                            });
                             return;
                           }
 
                           const emailError = validateEmail(editAdminForm.email);
                           if (emailError) {
-                            toast({ title: 'Validation Error', description: emailError, variant: 'destructive' });
+                            toast({
+                              title: 'Validation Error',
+                              description: emailError,
+                              variant: 'destructive',
+                            });
                             return;
                           }
                           let locationId = editAdminForm.locationId;
@@ -1377,13 +1686,21 @@ export default function SuperAdmin() {
                           if (locationId === '__other__') {
                             const cityRaw = editAdminOtherCity.trim();
                             if (!cityRaw) {
-                              toast({ title: 'Error', description: 'Please enter a city/location name', variant: 'destructive' });
+                              toast({
+                                title: 'Error',
+                                description: 'Please enter a city/location name',
+                                variant: 'destructive',
+                              });
                               return;
                             }
                             const cityLower = cityRaw.toLowerCase();
                             const existingLocation =
-                              locations.find((l) => String(l.city || '').toLowerCase() === cityLower) ||
-                              locations.find((l) => String(l.name || '').toLowerCase() === cityLower);
+                              locations.find(
+                                (l) => String(l.city || '').toLowerCase() === cityLower
+                              ) ||
+                              locations.find(
+                                (l) => String(l.name || '').toLowerCase() === cityLower
+                              );
 
                             if (existingLocation?.id) {
                               locationId = existingLocation.id;
@@ -1398,13 +1715,21 @@ export default function SuperAdmin() {
                             }
 
                             if (!locationId) {
-                              toast({ title: 'Error', description: 'Failed to create location', variant: 'destructive' });
+                              toast({
+                                title: 'Error',
+                                description: 'Failed to create location',
+                                variant: 'destructive',
+                              });
                               return;
                             }
                           }
 
                           if (!locationId) {
-                            toast({ title: 'Error', description: 'City/Garage is required', variant: 'destructive' });
+                            toast({
+                              title: 'Error',
+                              description: 'City/Garage is required',
+                              variant: 'destructive',
+                            });
                             return;
                           }
 
@@ -1413,34 +1738,54 @@ export default function SuperAdmin() {
                             email: editAdminForm.email,
                             locationId,
                           };
-                          
+
                           // If password is provided, validate it
                           if (editAdminForm.password && editAdminForm.password.trim()) {
                             const passwordError = validatePassword(editAdminForm.password);
                             if (passwordError) {
-                              toast({ title: 'Validation Error', description: passwordError, variant: 'destructive' });
+                              toast({
+                                title: 'Validation Error',
+                                description: passwordError,
+                                variant: 'destructive',
+                              });
                               return;
                             }
                             if (editAdminForm.password !== editAdminForm.confirmPassword) {
-                              toast({ title: 'Validation Error', description: 'Passwords do not match', variant: 'destructive' });
+                              toast({
+                                title: 'Validation Error',
+                                description: 'Passwords do not match',
+                                variant: 'destructive',
+                              });
                               return;
                             }
                             payload.password = editAdminForm.password.trim();
                           }
-                          
+
                           await usersAPI.update(editingAdmin.id, payload);
-                          toast({ 
-                            title: 'Admin updated', 
-                            description: payload.password ? 'Password has been updated successfully' : 'Admin details updated successfully' 
+                          toast({
+                            title: 'Admin updated',
+                            description: payload.password
+                              ? 'Password has been updated successfully'
+                              : 'Admin details updated successfully',
                           });
                           setEditAdminOpen(false);
                           setEditingAdmin(null);
                           // Reset form after successful update
-                          setEditAdminForm({ name: '', email: '', password: '', confirmPassword: '', locationId: '' });
+                          setEditAdminForm({
+                            name: '',
+                            email: '',
+                            password: '',
+                            confirmPassword: '',
+                            locationId: '',
+                          });
                           setEditAdminOtherCity('');
                           loadData();
                         } catch (e: any) {
-                          toast({ title: 'Error', description: e.message || 'Failed to update admin', variant: 'destructive' });
+                          toast({
+                            title: 'Error',
+                            description: e.message || 'Failed to update admin',
+                            variant: 'destructive',
+                          });
                         }
                       }}
                     >
@@ -1452,7 +1797,13 @@ export default function SuperAdmin() {
                         setEditAdminOpen(false);
                         setEditingAdmin(null);
                         // Reset form when canceling
-                        setEditAdminForm({ name: '', email: '', password: '', confirmPassword: '', locationId: '' });
+                        setEditAdminForm({
+                          name: '',
+                          email: '',
+                          password: '',
+                          confirmPassword: '',
+                          locationId: '',
+                        });
                       }}
                     >
                       Cancel
@@ -1464,110 +1815,185 @@ export default function SuperAdmin() {
           </div>
         )}
 
-        {activeTab === 'bookings' && (() => {
-          const filteredRentalsList = bookingSearchQuery.trim() === ''
-            ? filteredRentals
-            : filteredRentals.filter((r) => {
-                const bike = filteredBikes.find((b) => b.id === r.bikeId) || bikes.find((b) => b.id === r.bikeId);
-                const user = filteredUsers.find((u) => u.id === r.userId) || users.find((u) => u.id === r.userId);
-                const searchLower = bookingSearchQuery.toLowerCase();
-                const searchId = searchLower.startsWith('#') ? searchLower.slice(1) : searchLower;
-                
-                return (
-                  r.id.toLowerCase().includes(searchId) ||
-                  (bike?.name || '').toLowerCase().includes(searchLower) ||
-                  (user?.name || '').toLowerCase().includes(searchLower) ||
-                  (user?.email || '').toLowerCase().includes(searchLower) ||
-                  r.status.toLowerCase().includes(searchLower)
-                );
-              });
+        {activeTab === 'bookings' &&
+          (() => {
+            const filteredRentalsList =
+              bookingSearchQuery.trim() === ''
+                ? filteredRentals
+                : filteredRentals.filter((r) => {
+                    const bike =
+                      filteredBikes.find((b) => b.id === r.bikeId) ||
+                      bikes.find((b) => b.id === r.bikeId);
+                    const user =
+                      filteredUsers.find((u) => u.id === r.userId) ||
+                      users.find((u) => u.id === r.userId);
+                    const searchLower = bookingSearchQuery.toLowerCase();
+                    const searchId = searchLower.startsWith('#')
+                      ? searchLower.slice(1)
+                      : searchLower;
 
-          return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-display font-bold mb-2">All Bookings</h1>
-              <p className="text-muted-foreground">Oversight across all cities.</p>
-            </div>
-            
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search bookings..."
-                className="pl-10"
-                value={bookingSearchQuery}
-                onChange={(e) => setBookingSearchQuery(e.target.value)}
-              />
-            </div>
+                    return (
+                      r.id.toLowerCase().includes(searchId) ||
+                      (bike?.name || '').toLowerCase().includes(searchLower) ||
+                      (user?.name || '').toLowerCase().includes(searchLower) ||
+                      (user?.email || '').toLowerCase().includes(searchLower) ||
+                      r.status.toLowerCase().includes(searchLower)
+                    );
+                  });
 
-            <div className="bg-card rounded-2xl shadow-card overflow-hidden">
-              <div className="w-full overflow-x-auto">
-                <table className="w-full min-w-[900px]">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left px-6 py-4 font-medium whitespace-nowrap">Booking</th>
-                      <th className="text-left px-6 py-4 font-medium whitespace-nowrap">Bike</th>
-                      <th className="text-left px-6 py-4 font-medium whitespace-nowrap">User</th>
-                      <th className="text-left px-6 py-4 font-medium whitespace-nowrap">Start</th>
-                      <th className="text-left px-6 py-4 font-medium whitespace-nowrap">End</th>
-                      <th className="text-left px-6 py-4 font-medium whitespace-nowrap">Status</th>
-                      <th className="text-left px-6 py-4 font-medium whitespace-nowrap">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredRentalsList.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
-                          <div className="flex flex-col items-center justify-center">
-                            <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                            <p className="text-lg font-medium text-muted-foreground mb-2">
-                              {bookingSearchQuery.trim() ? 'No bookings match your search' : 'No bookings found'}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {bookingSearchQuery.trim() 
-                                ? 'Try adjusting your search terms.' 
-                                : selectedLocationFilter === 'all' 
-                                  ? 'There are no bookings yet.' 
-                                  : `There are no bookings for ${formatLocationDisplay(locations.find(loc => loc.id === selectedLocationFilter)) || 'this location'} yet.`}
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredRentalsList.map((r) => {
-                        const bike = filteredBikes.find((b) => b.id === r.bikeId) || bikes.find((b) => b.id === r.bikeId);
-                        const user = filteredUsers.find((u) => u.id === r.userId) || users.find((u) => u.id === r.userId);
-                      return (
-                        <tr key={r.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">#{r.id.slice(0,8)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{bike?.name || r.bikeId}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{user?.name || r.userId}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{new Date(r.startTime).toLocaleString()}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{r.endTime ? new Date(r.endTime).toLocaleString() : '-'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge className={statusStyles[r.status as keyof typeof statusStyles]?.color || 'bg-muted'}>
-                              {r.status}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex gap-2">
-                              {r.status === 'active' && (
-                                <Button size="sm" onClick={async () => { try { await rentalsAPI.end(r.id); toast({ title: 'Ride Closed' }); loadData(); } catch (e: any) { toast({ title: 'Error', description: e.message, variant: 'destructive' }); } }}>Force Close</Button>
-                              )}
-                              {r.status !== 'completed' && r.status !== 'cancelled' && (
-                                <Button size="sm" variant="outline" onClick={async () => { try { await rentalsAPI.cancel(r.id); toast({ title: 'Booking Cancelled' }); loadData(); } catch (e: any) { toast({ title: 'Error', description: e.message, variant: 'destructive' }); } }}>Cancel</Button>
-                              )}
-                            </div>
-                          </td>
+            return (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-display font-bold mb-2">All Bookings</h1>
+                  <p className="text-muted-foreground">Oversight across all cities.</p>
+                </div>
+
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search bookings..."
+                    className="pl-10"
+                    value={bookingSearchQuery}
+                    onChange={(e) => setBookingSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <div className="bg-card rounded-2xl shadow-card overflow-hidden">
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full min-w-[900px]">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                            Booking
+                          </th>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                            Bike
+                          </th>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                            User
+                          </th>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                            Start
+                          </th>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">End</th>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                            Status
+                          </th>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                            Actions
+                          </th>
                         </tr>
-                      );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filteredRentalsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-6 py-12 text-center">
+                              <div className="flex flex-col items-center justify-center">
+                                <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                                <p className="text-lg font-medium text-muted-foreground mb-2">
+                                  {bookingSearchQuery.trim()
+                                    ? 'No bookings match your search'
+                                    : 'No bookings found'}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {bookingSearchQuery.trim()
+                                    ? 'Try adjusting your search terms.'
+                                    : selectedLocationFilter === 'all'
+                                      ? 'There are no bookings yet.'
+                                      : `There are no bookings for ${formatLocationDisplay(locations.find((loc) => loc.id === selectedLocationFilter)) || 'this location'} yet.`}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredRentalsList.map((r) => {
+                            const bike =
+                              filteredBikes.find((b) => b.id === r.bikeId) ||
+                              bikes.find((b) => b.id === r.bikeId);
+                            const user =
+                              filteredUsers.find((u) => u.id === r.userId) ||
+                              users.find((u) => u.id === r.userId);
+                            return (
+                              <tr key={r.id}>
+                                <td className="px-6 py-4 whitespace-nowrap">#{r.id.slice(0, 8)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {bike?.name || r.bikeId}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {user?.name || r.userId}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {new Date(r.startTime).toLocaleString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {r.endTime ? new Date(r.endTime).toLocaleString() : '-'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <Badge
+                                    className={
+                                      statusStyles[r.status as keyof typeof statusStyles]?.color ||
+                                      'bg-muted'
+                                    }
+                                  >
+                                    {r.status}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex gap-2">
+                                    {r.status === 'active' && (
+                                      <Button
+                                        size="sm"
+                                        onClick={async () => {
+                                          try {
+                                            await rentalsAPI.end(r.id);
+                                            toast({ title: 'Ride Closed' });
+                                            loadData();
+                                          } catch (e: any) {
+                                            toast({
+                                              title: 'Error',
+                                              description: e.message,
+                                              variant: 'destructive',
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Force Close
+                                      </Button>
+                                    )}
+                                    {r.status !== 'completed' && r.status !== 'cancelled' && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={async () => {
+                                          try {
+                                            await rentalsAPI.cancel(r.id);
+                                            toast({ title: 'Booking Cancelled' });
+                                            loadData();
+                                          } catch (e: any) {
+                                            toast({
+                                              title: 'Error',
+                                              description: e.message,
+                                              variant: 'destructive',
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )})}
+            );
+          })}
 
         {/* Reuse Admin tabs for bikes/users/documents/locations */}
 
@@ -1604,7 +2030,15 @@ export default function SuperAdmin() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={user.role === 'admin' ? 'default' : user.role === 'superadmin' ? 'destructive' : 'secondary'}>
+                        <Badge
+                          variant={
+                            user.role === 'admin'
+                              ? 'default'
+                              : user.role === 'superadmin'
+                                ? 'destructive'
+                                : 'secondary'
+                          }
+                        >
                           {user.role}
                         </Badge>
                       </td>
@@ -1626,7 +2060,9 @@ export default function SuperAdmin() {
               </table>
               {filteredUsers.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
-                  {users.length === 0 ? "No users found in the system." : "No users match your search."}
+                  {users.length === 0
+                    ? 'No users found in the system.'
+                    : 'No users match your search.'}
                 </div>
               )}
             </div>
@@ -1637,7 +2073,9 @@ export default function SuperAdmin() {
           <div className="space-y-6">
             <div>
               <h1 className="text-2xl font-display font-bold mb-2">All Documents</h1>
-              <p className="text-muted-foreground">Review and approve user-submitted documents grouped by user.</p>
+              <p className="text-muted-foreground">
+                Review and approve user-submitted documents grouped by user.
+              </p>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
@@ -1664,8 +2102,8 @@ export default function SuperAdmin() {
             <div className="grid gap-4">
               {(() => {
                 // Get unique users who have documents
-                const userIdsWithDocs = new Set(filteredDocuments.map(d => d.userId));
-                const usersWithDocs = users.filter(u => userIdsWithDocs.has(u.id));
+                const userIdsWithDocs = new Set(filteredDocuments.map((d) => d.userId));
+                const usersWithDocs = users.filter((u) => userIdsWithDocs.has(u.id));
 
                 const docsByUserId = new Map<string, any[]>();
                 for (const doc of filteredDocuments) {
@@ -1680,17 +2118,27 @@ export default function SuperAdmin() {
                 const filteredUsersWithDocs = query
                   ? usersWithDocs.filter((u) => {
                       const userMatch =
-                        String(u?.name || '').toLowerCase().includes(query) ||
-                        String(u?.email || '').toLowerCase().includes(query) ||
-                        String(u?.mobile || '').toLowerCase().includes(query);
+                        String(u?.name || '')
+                          .toLowerCase()
+                          .includes(query) ||
+                        String(u?.email || '')
+                          .toLowerCase()
+                          .includes(query) ||
+                        String(u?.mobile || '')
+                          .toLowerCase()
+                          .includes(query);
 
                       if (userMatch) return true;
 
                       const userDocs = docsByUserId.get(u.id) || [];
                       return userDocs.some((d) => {
                         return (
-                          String(d?.type || '').toLowerCase().includes(query) ||
-                          String(d?.name || '').toLowerCase().includes(query)
+                          String(d?.type || '')
+                            .toLowerCase()
+                            .includes(query) ||
+                          String(d?.name || '')
+                            .toLowerCase()
+                            .includes(query)
                         );
                       });
                     })
@@ -1707,174 +2155,201 @@ export default function SuperAdmin() {
                   return latest;
                 };
 
-                const sortedUsersWithDocs = [...filteredUsersWithDocs].sort(
-                  (a, b) => {
-                    const timeA = latestDocTime(a.id);
-                    const timeB = latestDocTime(b.id);
-                    return documentsSort === 'newest' ? timeB - timeA : timeA - timeB;
-                  }
-                );
-                
+                const sortedUsersWithDocs = [...filteredUsersWithDocs].sort((a, b) => {
+                  const timeA = latestDocTime(a.id);
+                  const timeB = latestDocTime(b.id);
+                  return documentsSort === 'newest' ? timeB - timeA : timeA - timeB;
+                });
+
                 if (sortedUsersWithDocs.length === 0) {
                   return (
                     <div className="col-span-full text-center py-12">
                       <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                      <p className="text-lg font-medium text-muted-foreground mb-2">No users with documents found</p>
-                      <p className="text-sm text-muted-foreground">
-                        There are no documents yet.
+                      <p className="text-lg font-medium text-muted-foreground mb-2">
+                        No users with documents found
                       </p>
+                      <p className="text-sm text-muted-foreground">There are no documents yet.</p>
                     </div>
                   );
                 }
-                
-                return sortedUsersWithDocs.map((user) => {
-                  const userDocs = docsByUserId.get(user.id) || [];
-                  if (userDocs.length === 0) return null;
-                  
-                  const pendingCount = userDocs.filter(d => d.status === 'pending').length;
-                  const approvedCount = userDocs.filter(d => d.status === 'approved').length;
-                  const rejectedCount = userDocs.filter(d => d.status === 'rejected').length;
-                  
-                  return (
-                    <div key={user.id} className="bg-card rounded-2xl shadow-card p-4 md:p-6">
-                      <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-4">
-                        <div className="flex items-center gap-4 w-full">
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <Users className="h-6 w-6 text-primary" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-lg truncate">{user.name}</p>
-                            <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                            <p className="text-sm text-muted-foreground">{user.mobile || '-'}</p>
-                            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-                              <p className="text-sm">
-                                <span className="text-muted-foreground">Emergency Contact: </span>
-                                <span className="text-foreground">{user.emergencyContact || '-'}</span>
-                              </p>
-                              <p className="text-sm">
-                                <span className="text-muted-foreground">Family Contact: </span>
-                                <span className="text-foreground">{user.familyContact || '-'}</span>
-                              </p>
-                              <p className="text-sm md:col-span-2">
-                                <span className="text-muted-foreground">Permanent Address: </span>
-                                <span className="text-foreground">{user.permanentAddress || '-'}</span>
-                              </p>
-                              <p className="text-sm">
-                                <span className="text-muted-foreground">Current Location: </span>
-                                <span className="text-foreground">{user.currentAddress || '-'}</span>
-                              </p>
-                              <p className="text-sm">
-                                <span className="text-muted-foreground">Hotel Stay: </span>
-                                <span className="text-foreground">{user.hotelStay || '-'}</span>
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="w-full sm:w-auto shrink-0"
-                          onClick={() => handleViewUserDocuments(user.id)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Documents
-                        </Button>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <Badge variant="outline" className="bg-primary/10">
-                          Total: {userDocs.length}
-                        </Badge>
-                        {pendingCount > 0 && (
-                          <Badge className="bg-primary/10 text-primary">
-                            Pending: {pendingCount}
-                          </Badge>
-                        )}
-                        {approvedCount > 0 && (
-                          <Badge className="bg-accent/10 text-accent">
-                            Approved: {approvedCount}
-                          </Badge>
-                        )}
-                        {rejectedCount > 0 && (
-                          <Badge className="bg-destructive/10 text-destructive">
-                            Rejected: {rejectedCount}
-                          </Badge>
-                        )}
-                      </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {userDocs.map((doc) => {
-                          const StatusIcon = statusStyles[doc.status as keyof typeof statusStyles].icon;
-                          return (
-                            <div key={doc.id} className="border rounded-lg p-2 sm:p-3 bg-muted/30">
-                              <div className="flex items-center justify-between mb-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <Badge className={statusStyles[doc.status as keyof typeof statusStyles].color} variant="outline">
-                                  <StatusIcon className="h-3 w-3 mr-1" />
-                                  {doc.status}
-                                </Badge>
-                              </div>
-                              <p className="text-xs font-medium mb-1 truncate">{doc.type.replace('_', ' ')}</p>
-                              <p className="text-xs text-muted-foreground mb-2 truncate">{doc.name}</p>
-                              {doc.status === 'rejected' && doc.rejectionReason && (
-                                <div className="mb-2 px-1 py-0.5 bg-destructive/5 border border-destructive/10 rounded text-[9px] text-destructive italic truncate" title={doc.rejectionReason}>
-                                  Reason: {doc.rejectionReason}
-                                </div>
-                              )}
-                              {/* Document Preview */}
-                              <div 
-                                className="mb-2 border rounded overflow-hidden bg-background cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() => {
-                                  if (doc.url) {
-                                    setPreviewImageUrl(doc.url);
-                                    setIsPreviewModalOpen(true);
-                                  }
-                                }}
-                              >
-                                <img
-                                  src={doc.url}
-                                  alt={doc.name}
-                                  className="w-full h-24 sm:h-32 object-contain"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-center mt-2">
-                                {doc.status !== 'rejected' && (
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    className="h-7 px-2 text-[10px] text-destructive hover:text-destructive flex-1"
-                                    onClick={() => handleDocumentAction(doc.id || doc._id, 'reject')}
-                                  >
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Reject
-                                  </Button>
-                                )}
-                                {doc.status !== 'approved' && (
-                                  <Button 
-                                    size="sm"
-                                    className="h-7 px-2 text-[10px] bg-accent hover:bg-accent/90 flex-1"
-                                    onClick={() => handleDocumentAction(doc.id || doc._id, 'approve')}
-                                  >
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Approve
-                                  </Button>
-                                )}
+                return sortedUsersWithDocs
+                  .map((user) => {
+                    const userDocs = docsByUserId.get(user.id) || [];
+                    if (userDocs.length === 0) return null;
+
+                    const pendingCount = userDocs.filter((d) => d.status === 'pending').length;
+                    const approvedCount = userDocs.filter((d) => d.status === 'approved').length;
+                    const rejectedCount = userDocs.filter((d) => d.status === 'rejected').length;
+
+                    return (
+                      <div key={user.id} className="bg-card rounded-2xl shadow-card p-4 md:p-6">
+                        <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-4">
+                          <div className="flex items-center gap-4 w-full">
+                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Users className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-lg truncate">{user.name}</p>
+                              <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                              <p className="text-sm text-muted-foreground">{user.mobile || '-'}</p>
+                              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                                <p className="text-sm">
+                                  <span className="text-muted-foreground">Emergency Contact: </span>
+                                  <span className="text-foreground">
+                                    {user.emergencyContact || '-'}
+                                  </span>
+                                </p>
+                                <p className="text-sm">
+                                  <span className="text-muted-foreground">Family Contact: </span>
+                                  <span className="text-foreground">
+                                    {user.familyContact || '-'}
+                                  </span>
+                                </p>
+                                <p className="text-sm md:col-span-2">
+                                  <span className="text-muted-foreground">Permanent Address: </span>
+                                  <span className="text-foreground">
+                                    {user.permanentAddress || '-'}
+                                  </span>
+                                </p>
+                                <p className="text-sm">
+                                  <span className="text-muted-foreground">Current Location: </span>
+                                  <span className="text-foreground">
+                                    {user.currentAddress || '-'}
+                                  </span>
+                                </p>
+                                <p className="text-sm">
+                                  <span className="text-muted-foreground">Hotel Stay: </span>
+                                  <span className="text-foreground">{user.hotelStay || '-'}</span>
+                                </p>
                               </div>
                             </div>
-                          );
-                        })}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full sm:w-auto shrink-0"
+                            onClick={() => handleViewUserDocuments(user.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Documents
+                          </Button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <Badge variant="outline" className="bg-primary/10">
+                            Total: {userDocs.length}
+                          </Badge>
+                          {pendingCount > 0 && (
+                            <Badge className="bg-primary/10 text-primary">
+                              Pending: {pendingCount}
+                            </Badge>
+                          )}
+                          {approvedCount > 0 && (
+                            <Badge className="bg-accent/10 text-accent">
+                              Approved: {approvedCount}
+                            </Badge>
+                          )}
+                          {rejectedCount > 0 && (
+                            <Badge className="bg-destructive/10 text-destructive">
+                              Rejected: {rejectedCount}
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                          {userDocs.map((doc) => {
+                            const StatusIcon =
+                              statusStyles[doc.status as keyof typeof statusStyles].icon;
+                            return (
+                              <div
+                                key={doc.id}
+                                className="border rounded-lg p-2 sm:p-3 bg-muted/30"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <Badge
+                                    className={
+                                      statusStyles[doc.status as keyof typeof statusStyles].color
+                                    }
+                                    variant="outline"
+                                  >
+                                    <StatusIcon className="h-3 w-3 mr-1" />
+                                    {doc.status}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs font-medium mb-1 truncate">
+                                  {doc.type.replace('_', ' ')}
+                                </p>
+                                <p className="text-xs text-muted-foreground mb-2 truncate">
+                                  {doc.name}
+                                </p>
+                                {doc.status === 'rejected' && doc.rejectionReason && (
+                                  <div
+                                    className="mb-2 px-1 py-0.5 bg-destructive/5 border border-destructive/10 rounded text-[9px] text-destructive italic truncate"
+                                    title={doc.rejectionReason}
+                                  >
+                                    Reason: {doc.rejectionReason}
+                                  </div>
+                                )}
+                                {/* Document Preview */}
+                                <div
+                                  className="mb-2 border rounded overflow-hidden bg-background cursor-pointer hover:bg-muted/50 transition-colors"
+                                  onClick={() => {
+                                    if (doc.url) {
+                                      setPreviewImageUrl(doc.url);
+                                      setIsPreviewModalOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <img
+                                    src={doc.url}
+                                    alt={doc.name}
+                                    className="w-full h-24 sm:h-32 object-contain"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex gap-2 justify-center mt-2">
+                                  {doc.status !== 'rejected' && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[10px] text-destructive hover:text-destructive flex-1"
+                                      onClick={() =>
+                                        handleDocumentAction(doc.id || doc._id, 'reject')
+                                      }
+                                    >
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      Reject
+                                    </Button>
+                                  )}
+                                  {doc.status !== 'approved' && (
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-2 text-[10px] bg-accent hover:bg-accent/90 flex-1"
+                                      onClick={() =>
+                                        handleDocumentAction(doc.id || doc._id, 'approve')
+                                      }
+                                    >
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Approve
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                }).filter(Boolean);
+                    );
+                  })
+                  .filter(Boolean);
               })()}
             </div>
           </div>
         )}
-
 
         {activeTab === 'settings' && (
           <div className="space-y-6">
@@ -1886,7 +2361,8 @@ export default function SuperAdmin() {
             <div className="bg-card rounded-2xl shadow-card p-6">
               <h2 className="font-display font-semibold text-lg mb-4">Background Images</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                Manage images for the home page background. If multiple images are active, they will display as a slider. If only one image is active, it will be a static background.
+                Manage images for the home page background. If multiple images are active, they will
+                display as a slider. If only one image is active, it will be a static background.
               </p>
               <HeroImageManager />
             </div>
@@ -1897,7 +2373,7 @@ export default function SuperAdmin() {
           <div className="bg-card rounded-2xl shadow-card p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display font-semibold text-lg">Locations</h2>
-              <Button 
+              <Button
                 onClick={() => {
                   setEditingLocation(null);
                   setLocationForm({ name: '', city: '', state: '', country: 'India' });
@@ -1923,7 +2399,12 @@ export default function SuperAdmin() {
                         className="w-full sm:w-auto"
                         onClick={() => {
                           setEditingLocation(loc);
-                          setLocationForm({ name: loc.name, city: loc.city, state: loc.state, country: loc.country || 'India' });
+                          setLocationForm({
+                            name: loc.name,
+                            city: loc.city,
+                            state: loc.state,
+                            country: loc.country || 'India',
+                          });
                           setLocationDialogOpen(true);
                         }}
                       >
@@ -1935,13 +2416,21 @@ export default function SuperAdmin() {
                         variant="destructive"
                         className="w-full sm:w-auto"
                         onClick={async () => {
-                          if (window.confirm(`Are you sure you want to delete "${formatLocationDisplay(loc)}"?`)) {
+                          if (
+                            window.confirm(
+                              `Are you sure you want to delete "${formatLocationDisplay(loc)}"?`
+                            )
+                          ) {
                             try {
                               await locationsAPI.delete(loc.id);
                               toast({ title: 'Location deleted' });
                               loadData();
                             } catch (e: any) {
-                              toast({ title: 'Error', description: e.message || 'Failed to delete location', variant: 'destructive' });
+                              toast({
+                                title: 'Error',
+                                description: e.message || 'Failed to delete location',
+                                variant: 'destructive',
+                              });
                             }
                           }
                         }}
@@ -1958,55 +2447,84 @@ export default function SuperAdmin() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>{editingLocation ? 'Edit Location' : 'Add Location'}</DialogTitle>
-                  <DialogDescription>{editingLocation ? 'Update location details' : 'Enter new location details'}</DialogDescription>
+                  <DialogDescription>
+                    {editingLocation ? 'Update location details' : 'Enter new location details'}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">Location Name (e.g. Ameerpet)</Label>
-                    <Input placeholder="Location Name" value={locationForm.name} onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })} />
+                    <Input
+                      placeholder="Location Name"
+                      value={locationForm.name}
+                      onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">City</Label>
-                    <Input placeholder="City" value={locationForm.city} onChange={(e) => setLocationForm({ ...locationForm, city: e.target.value })} />
+                    <Input
+                      placeholder="City"
+                      value={locationForm.city}
+                      onChange={(e) => setLocationForm({ ...locationForm, city: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">State</Label>
-                    <Input placeholder="State" value={locationForm.state} onChange={(e) => setLocationForm({ ...locationForm, state: e.target.value })} />
+                    <Input
+                      placeholder="State"
+                      value={locationForm.state}
+                      onChange={(e) => setLocationForm({ ...locationForm, state: e.target.value })}
+                    />
                   </div>
                   <div className="flex gap-2 pt-4">
                     <Button
                       className="flex-1"
                       onClick={async () => {
                         if (!locationForm.name.trim()) {
-                          toast({ title: 'Error', description: 'Location name is required', variant: 'destructive' });
+                          toast({
+                            title: 'Error',
+                            description: 'Location name is required',
+                            variant: 'destructive',
+                          });
                           return;
                         }
-                        
+
                         // Default city/state to name if empty
                         const finalForm = {
                           ...locationForm,
                           city: locationForm.city || locationForm.name,
-                          state: locationForm.state || locationForm.name
+                          state: locationForm.state || locationForm.name,
                         };
 
                         try {
                           if (editingLocation) {
                             // Check for duplicates when editing (excluding current)
-                            const exists = locations.some(l => 
-                              l.id !== editingLocation.id && 
-                              l.name.toLowerCase() === finalForm.name.toLowerCase()
+                            const exists = locations.some(
+                              (l) =>
+                                l.id !== editingLocation.id &&
+                                l.name.toLowerCase() === finalForm.name.toLowerCase()
                             );
                             if (exists) {
-                              toast({ title: 'Error', description: 'Location with this name already exists', variant: 'destructive' });
+                              toast({
+                                title: 'Error',
+                                description: 'Location with this name already exists',
+                                variant: 'destructive',
+                              });
                               return;
                             }
                             await locationsAPI.update(editingLocation.id, finalForm);
                             toast({ title: 'Location updated' });
                           } else {
                             // Frontend check for duplicates
-                            const exists = locations.some(l => l.name.toLowerCase() === finalForm.name.toLowerCase());
+                            const exists = locations.some(
+                              (l) => l.name.toLowerCase() === finalForm.name.toLowerCase()
+                            );
                             if (exists) {
-                              toast({ title: 'Error', description: 'Location with this name already exists', variant: 'destructive' });
+                              toast({
+                                title: 'Error',
+                                description: 'Location with this name already exists',
+                                variant: 'destructive',
+                              });
                               return;
                             }
                             await locationsAPI.create(finalForm);
@@ -2016,21 +2534,29 @@ export default function SuperAdmin() {
                           setEditingLocation(null);
                           loadData();
                         } catch (e: any) {
-                          toast({ title: 'Error', description: e.message || 'Failed to save location', variant: 'destructive' });
+                          toast({
+                            title: 'Error',
+                            description: e.message || 'Failed to save location',
+                            variant: 'destructive',
+                          });
                         }
                       }}
                     >
                       {editingLocation ? 'Save Changes' : 'Add Location'}
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => setLocationDialogOpen(false)}>Cancel</Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setLocationDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
         )}
-
-
       </main>
       <Dialog open={bikeDialogOpen} onOpenChange={setBikeDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -2041,78 +2567,135 @@ export default function SuperAdmin() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Brand</Label>
-                <Select 
-                  value={bikeForm.brand} 
+                <Label className={bikeFormErrors.brand ? 'text-destructive' : ''}>Brand</Label>
+                <Select
+                  value={bikeForm.brand}
                   onValueChange={(v) => {
                     setBikeForm({ ...bikeForm, brand: v, name: '' });
+                    setBikeFormErrors((prev) => {
+                      const { brand: _, ...rest } = prev;
+                      return rest;
+                    });
                   }}
                 >
-                  <SelectTrigger><SelectValue placeholder="Select Brand" /></SelectTrigger>
+                  <SelectTrigger className={bikeFormErrors.brand ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select Brand" />
+                  </SelectTrigger>
                   <SelectContent>
                     {bikeSpecs.map((spec) => (
-                      <SelectItem key={spec.brand} value={spec.brand}>{spec.brand}</SelectItem>
+                      <SelectItem key={spec.brand} value={spec.brand}>
+                        {spec.brand}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {bikeFormErrors.brand && (
+                  <p className="text-[10px] text-destructive">{bikeFormErrors.brand}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>Vehicle Name</Label>
-                <Select 
-                  value={bikeForm.name} 
-                  onValueChange={(v) => setBikeForm({ ...bikeForm, name: v })}
+                <Label className={bikeFormErrors.name ? 'text-destructive' : ''}>
+                  Vehicle Name
+                </Label>
+                <Select
+                  value={bikeForm.name}
+                  onValueChange={(v) => {
+                    setBikeForm({ ...bikeForm, name: v });
+                    setBikeFormErrors((prev) => {
+                      const { name: _, ...rest } = prev;
+                      return rest;
+                    });
+                  }}
                   disabled={!bikeForm.brand}
                 >
-                  <SelectTrigger><SelectValue placeholder="Select Vehicle" /></SelectTrigger>
+                  <SelectTrigger className={bikeFormErrors.name ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select Vehicle" />
+                  </SelectTrigger>
                   <SelectContent>
-                    {(bikeSpecs.find(s => s.brand === bikeForm.brand)?.models || []).map((model: string) => (
-                      <SelectItem key={model} value={model}>{model}</SelectItem>
-                    ))}
+                    {(bikeSpecs.find((s) => s.brand === bikeForm.brand)?.models || []).map(
+                      (model: string) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
+                {bikeFormErrors.name && (
+                  <p className="text-[10px] text-destructive">{bikeFormErrors.name}</p>
+                )}
               </div>
             </div>
             <div className="space-y-2">
               <Label>Year</Label>
-              <Select 
-                value={bikeForm.year} 
+              <Select
+                value={bikeForm.year}
                 onValueChange={(v) => setBikeForm({ ...bikeForm, year: v })}
               >
-                <SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: new Date().getFullYear() - 2000 + 1 }, (_, i) => 2000 + i)
                     .reverse()
                     .map((year) => (
-                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
             </div>
-            <Select value={bikeForm.type} onValueChange={(v) => setBikeForm({ ...bikeForm, type: v })}>
-                    <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fuel">Fuel</SelectItem>
-                      <SelectItem value="electric">Electric</SelectItem>
-                <SelectItem value="scooter">Scooter</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={bikeForm.category || 'midrange'} onValueChange={(v) => setBikeForm({ ...bikeForm, category: v })}>
-              <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="budget">Budget</SelectItem>
-                <SelectItem value="midrange">Mid Range</SelectItem>
-                <SelectItem value="topend">Top End</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className={bikeFormErrors.type ? 'text-destructive' : ''}>Type</Label>
+              <Select
+                value={bikeForm.type}
+                onValueChange={(v) => {
+                    setBikeForm({ ...bikeForm, type: v });
+                    setBikeFormErrors((prev) => {
+                      const { type: _, ...rest } = prev;
+                      return rest;
+                    });
+                  }}
+              >
+                <SelectTrigger className={bikeFormErrors.type ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fuel">Fuel</SelectItem>
+                  <SelectItem value="electric">Electric</SelectItem>
+                  <SelectItem value="scooter">Scooter</SelectItem>
+                </SelectContent>
+              </Select>
+              {bikeFormErrors.type && (
+                <p className="text-[10px] text-destructive">{bikeFormErrors.type}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select
+                value={bikeForm.category || 'midrange'}
+                onValueChange={(v) => setBikeForm({ ...bikeForm, category: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="budget">Budget</SelectItem>
+                  <SelectItem value="midrange">Mid Range</SelectItem>
+                  <SelectItem value="topend">Top End</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2 border-t pt-4 mt-4">
               <Label className="text-sm font-medium">Tariff Configuration (Admin Only)</Label>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Weekday Rate (₹/hr)</Label>
-                  <Input 
+                  <Input
                     type="text"
-                    placeholder="Weekday Rate" 
-                    value={bikeForm.weekdayRate} 
+                    placeholder="Weekday Rate"
+                    value={bikeForm.weekdayRate}
                     onChange={(e) => handleNumericChange('weekdayRate', e.target.value)}
                     onKeyDown={handleNumericKeyDown}
                     className={numericErrors.weekdayRate ? 'border-destructive' : ''}
@@ -2123,10 +2706,10 @@ export default function SuperAdmin() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Weekend Rate (₹/hr)</Label>
-                  <Input 
+                  <Input
                     type="text"
-                    placeholder="Weekend Rate" 
-                    value={bikeForm.weekendRate} 
+                    placeholder="Weekend Rate"
+                    value={bikeForm.weekendRate}
                     onChange={(e) => handleNumericChange('weekendRate', e.target.value)}
                     onKeyDown={handleNumericKeyDown}
                     className={numericErrors.weekendRate ? 'border-destructive' : ''}
@@ -2137,10 +2720,10 @@ export default function SuperAdmin() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Excess KM Charge (₹/km)</Label>
-                  <Input 
+                  <Input
                     type="text"
-                    placeholder="Excess Charge" 
-                    value={bikeForm.excessKmCharge} 
+                    placeholder="Excess Charge"
+                    value={bikeForm.excessKmCharge}
                     onChange={(e) => handleNumericChange('excessKmCharge', e.target.value)}
                     onKeyDown={handleNumericKeyDown}
                     className={numericErrors.excessKmCharge ? 'border-destructive' : ''}
@@ -2151,10 +2734,10 @@ export default function SuperAdmin() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">KM Limit Per Hour</Label>
-                  <Input 
+                  <Input
                     type="text"
-                    placeholder="KM Limit/Hr" 
-                    value={bikeForm.kmLimitPerHour} 
+                    placeholder="KM Limit/Hr"
+                    value={bikeForm.kmLimitPerHour}
                     onChange={(e) => handleNumericChange('kmLimitPerHour', e.target.value)}
                     onKeyDown={handleNumericKeyDown}
                     className={numericErrors.kmLimitPerHour ? 'border-destructive' : ''}
@@ -2165,10 +2748,10 @@ export default function SuperAdmin() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">KM Limit</Label>
-                  <Input 
+                  <Input
                     type="text"
-                    placeholder="KM Limit" 
-                    value={bikeForm.kmLimit} 
+                    placeholder="KM Limit"
+                    value={bikeForm.kmLimit}
                     onChange={(e) => handleNumericChange('kmLimit', e.target.value)}
                     onKeyDown={handleNumericKeyDown}
                     className={numericErrors.kmLimit ? 'border-destructive' : ''}
@@ -2179,10 +2762,10 @@ export default function SuperAdmin() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Min Booking Hours</Label>
-                  <Input 
+                  <Input
                     type="text"
-                    placeholder="Min Hours" 
-                    value={bikeForm.minBookingHours} 
+                    placeholder="Min Hours"
+                    value={bikeForm.minBookingHours}
                     onChange={(e) => handleNumericChange('minBookingHours', e.target.value)}
                     onKeyDown={handleNumericKeyDown}
                     className={numericErrors.minBookingHours ? 'border-destructive' : ''}
@@ -2193,10 +2776,10 @@ export default function SuperAdmin() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">GST Percentage (%)</Label>
-                  <Input 
+                  <Input
                     type="text"
-                    placeholder="GST %" 
-                    value={bikeForm.gstPercentage} 
+                    placeholder="GST %"
+                    value={bikeForm.gstPercentage}
                     onChange={(e) => handleNumericChange('gstPercentage', e.target.value)}
                     onKeyDown={handleNumericKeyDown}
                     className={numericErrors.gstPercentage ? 'border-destructive' : ''}
@@ -2207,29 +2790,61 @@ export default function SuperAdmin() {
                 </div>
               </div>
             </div>
-            <Select value={bikeForm.locationId} onValueChange={(v) => setBikeForm({ ...bikeForm, locationId: v })}>
-              <SelectTrigger><SelectValue placeholder="Location" /></SelectTrigger>
-              <SelectContent>
-                {locations.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.id}>{formatLocationDisplay(loc)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label className={bikeFormErrors.locationId ? 'text-destructive' : ''}>
+                Location
+              </Label>
+              <Select
+                value={bikeForm.locationId}
+                onValueChange={(v) => {
+                  setBikeForm({ ...bikeForm, locationId: v });
+                  setBikeFormErrors((prev) => {
+                    const { locationId: _, ...rest } = prev;
+                    return rest;
+                  });
+                }}
+              >
+                <SelectTrigger className={bikeFormErrors.locationId ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {formatLocationDisplay(loc)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {bikeFormErrors.locationId && (
+                <p className="text-[10px] text-destructive">{bikeFormErrors.locationId}</p>
+              )}
+            </div>
             <div className="space-y-3 border-t pt-4">
-              <Label className="text-sm font-medium">Main Vehicle Image</Label>
+              <Label
+                className={`text-sm font-medium ${bikeFormErrors.image ? 'text-destructive' : ''}`}
+              >
+                Main Vehicle Image
+              </Label>
               <div className="flex gap-4 items-start">
                 <BikeImagePreview url={bikeForm.image} label="Main vehicle preview" />
                 <div className="flex-1 space-y-2">
-                  <Input 
-                    placeholder="Enter Image URL" 
-                    value={bikeForm.image} 
-                    onChange={(e) => setBikeForm({ ...bikeForm, image: e.target.value })} 
+                  <Input
+                    placeholder="Enter Image URL"
+                    value={bikeForm.image}
+                    onChange={(e) => {
+                      setBikeForm({ ...bikeForm, image: e.target.value });
+                      setBikeFormErrors((prev) => {
+                        const { image: _, ...rest } = prev;
+                        return rest;
+                      });
+                    }}
+                    className={bikeFormErrors.image ? 'border-destructive' : ''}
                   />
                   <div className="relative">
                     <Input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
-                      className="cursor-pointer"
+                      className={`cursor-pointer ${bikeFormErrors.image ? 'border-destructive' : ''}`}
                       disabled={isUploading}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
@@ -2263,13 +2878,28 @@ export default function SuperAdmin() {
                         try {
                           const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
                           if (res?.fileUrl) {
-                            setBikeForm({ ...bikeForm, image: res.fileUrl });
-                            toast({ title: 'Image uploaded', description: 'Bike image has been uploaded' });
-                          } else {
-                            toast({ title: 'Upload failed', description: 'No file URL returned', variant: 'destructive' });
+                              setBikeForm({ ...bikeForm, image: res.fileUrl });
+                              setBikeFormErrors((prev) => {
+                                const { image: _, ...rest } = prev;
+                                return rest;
+                              });
+                              toast({
+                                title: 'Image uploaded',
+                                description: 'Bike image has been uploaded',
+                              });
+                            } else {
+                            toast({
+                              title: 'Upload failed',
+                              description: 'No file URL returned',
+                              variant: 'destructive',
+                            });
                           }
                         } catch (err: any) {
-                          toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
+                          toast({
+                            title: 'Upload error',
+                            description: err.message || 'Failed to upload image',
+                            variant: 'destructive',
+                          });
                         } finally {
                           setIsUploading(false);
                         }
@@ -2283,7 +2913,12 @@ export default function SuperAdmin() {
                       )}
                     </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Tip: Click image to see larger preview</p>
+                  {bikeFormErrors.image && (
+                    <p className="text-[10px] text-destructive">{bikeFormErrors.image}</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    Tip: Click image to see larger preview
+                  </p>
                 </div>
               </div>
             </div>
@@ -2291,66 +2926,78 @@ export default function SuperAdmin() {
             {/* Additional Images */}
             <div className="space-y-4 border-t pt-4">
               <Label className="text-sm font-medium">Additional Images (Optional)</Label>
-              {bikeForm.images && bikeForm.images.map((img: string, index: number) => (
-                <div key={index} className="space-y-3 p-3 border rounded-xl bg-muted/20 relative">
-                   <div className="flex items-center justify-between">
-                     <Label className="text-xs font-semibold">Image Slot {index + 1}</Label>
-                     {img && (
-                       <Button 
-                         variant="ghost" 
-                         size="sm" 
-                         className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10" 
-                         onClick={() => {
-                           const newImages = [...bikeForm.images];
-                           newImages[index] = '';
-                           setBikeForm({ ...bikeForm, images: newImages });
-                         }}
-                       >
-                         <X className="h-3 w-3" />
-                       </Button>
-                     )}
-                   </div>
-                   <div className="flex gap-4 items-start">
-                    <BikeImagePreview url={img} label={`Additional preview ${index + 1}`} />
-                    <div className="flex-1 space-y-2">
-                      <Input 
-                        placeholder={`Image URL ${index + 1}`} 
-                        value={img} 
-                        onChange={(e) => {
-                          const newImages = [...bikeForm.images];
-                          newImages[index] = e.target.value;
-                          setBikeForm({ ...bikeForm, images: newImages });
-                        }} 
-                      />
-                      <div className="relative">
+              {bikeForm.images &&
+                bikeForm.images.map((img: string, index: number) => (
+                  <div key={index} className="space-y-3 p-3 border rounded-xl bg-muted/20 relative">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold">Image Slot {index + 1}</Label>
+                      {img && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            const newImages = [...bikeForm.images];
+                            newImages[index] = '';
+                            setBikeForm({ ...bikeForm, images: newImages });
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex gap-4 items-start">
+                      <BikeImagePreview url={img} label={`Additional preview ${index + 1}`} />
+                      <div className="flex-1 space-y-2">
                         <Input
-                          type="file"
-                          accept="image/*"
-                          className="cursor-pointer h-9 text-xs"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            try {
-                              const res = await documentsAPI.uploadFile(file, file.name, 'bike_image');
-                              if (res?.fileUrl) {
-                                const newImages = [...bikeForm.images];
-                                newImages[index] = res.fileUrl;
-                                setBikeForm({ ...bikeForm, images: newImages });
-                                toast({ title: 'Image uploaded', description: `Image ${index + 1} has been uploaded` });
-                              }
-                            } catch (err: any) {
-                              toast({ title: 'Upload error', description: err.message || 'Failed to upload image', variant: 'destructive' });
-                            }
+                          placeholder={`Image URL ${index + 1}`}
+                          value={img}
+                          onChange={(e) => {
+                            const newImages = [...bikeForm.images];
+                            newImages[index] = e.target.value;
+                            setBikeForm({ ...bikeForm, images: newImages });
                           }}
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                          <Download className="h-3.5 w-3.5" />
+                        <div className="relative">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            className="cursor-pointer h-9 text-xs"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              try {
+                                const res = await documentsAPI.uploadFile(
+                                  file,
+                                  file.name,
+                                  'bike_image'
+                                );
+                                if (res?.fileUrl) {
+                                  const newImages = [...bikeForm.images];
+                                  newImages[index] = res.fileUrl;
+                                  setBikeForm({ ...bikeForm, images: newImages });
+                                  toast({
+                                    title: 'Image uploaded',
+                                    description: `Image ${index + 1} has been uploaded`,
+                                  });
+                                }
+                              } catch (err: any) {
+                                toast({
+                                  title: 'Upload error',
+                                  description: err.message || 'Failed to upload image',
+                                  variant: 'destructive',
+                                });
+                              }
+                            }}
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                            <Download className="h-3.5 w-3.5" />
+                          </div>
                         </div>
                       </div>
                     </div>
-                   </div>
-                </div>
-              ))}
+                  </div>
+                ))}
             </div>
 
             <div className="flex gap-2">
@@ -2359,14 +3006,26 @@ export default function SuperAdmin() {
                 onClick={async () => {
                   try {
                     // Form validation
-                    if (!bikeForm.image) {
+                    const errors: Record<string, string> = {};
+                    if (!bikeForm.brand) errors.brand = 'Brand is required';
+                    if (!bikeForm.name) errors.name = 'Vehicle name is required';
+                    if (!bikeForm.type) errors.type = 'Type is required';
+                    if (!bikeForm.locationId) errors.locationId = 'Location is required';
+                    if (!bikeForm.image) errors.image = 'Vehicle image is required';
+
+                    if (Object.keys(errors).length > 0) {
+                      setBikeFormErrors(errors);
+                      const firstError = Object.values(errors)[0];
                       toast({
-                        title: 'Vehicle image is required',
-                        description: 'Please upload or provide an image URL for the vehicle.',
+                        title: 'Validation Error',
+                        description: firstError,
                         variant: 'destructive',
                       });
                       return;
                     }
+
+                    // Reset errors if validation passes
+                    setBikeFormErrors({});
 
                     if (isUploading) {
                       toast({
@@ -2387,52 +3046,72 @@ export default function SuperAdmin() {
                       images: bikeForm.images,
                     };
 
-                          payload.kmLimit = bikeForm.kmLimit ? parseFloat(bikeForm.kmLimit) : null;
-                          
-                          // Always include category if it exists in the form
-                          if (bikeForm.category) {
-                            payload.category = bikeForm.category;
-                          } else {
-                            payload.category = 'midrange'; // Default if not set
-                          }
+                    payload.kmLimit = bikeForm.kmLimit ? parseFloat(bikeForm.kmLimit) : null;
 
-                          // Add tariff fields
-                          payload.weekdayRate = bikeForm.weekdayRate ? parseFloat(bikeForm.weekdayRate) : null;
-                          payload.weekendRate = bikeForm.weekendRate ? parseFloat(bikeForm.weekendRate) : null;
-                          payload.excessKmCharge = bikeForm.excessKmCharge ? parseFloat(bikeForm.excessKmCharge) : null;
-                          payload.kmLimitPerHour = bikeForm.kmLimitPerHour ? parseFloat(bikeForm.kmLimitPerHour) : null;
-                          payload.minBookingHours = bikeForm.minBookingHours ? parseFloat(bikeForm.minBookingHours) : null;
-                          // Handle GST percentage - allow 0 as a valid value
-                          if (bikeForm.gstPercentage !== undefined && bikeForm.gstPercentage !== null && bikeForm.gstPercentage !== '') {
-                            const gstValue = parseFloat(bikeForm.gstPercentage);
-                            payload.gstPercentage = isNaN(gstValue) ? 18.0 : gstValue;
-                          } else {
-                            payload.gstPercentage = 18.0;
-                          }
-                          
-                          // Add pricing fields
-                          payload.price12Hours = bikeForm.price12Hours ? parseFloat(bikeForm.price12Hours) : null;
-                          payload.pricePerWeek = bikeForm.pricePerWeek ? parseFloat(bikeForm.pricePerWeek) : null;
+                    // Always include category if it exists in the form
+                    if (bikeForm.category) {
+                      payload.category = bikeForm.category;
+                    } else {
+                      payload.category = 'midrange'; // Default if not set
+                    }
 
-                          // Add individual hourly rates for hours 13-24
-                          for (let hour = 13; hour <= 24; hour++) {
-                            const fieldName = `pricePerHour${hour}`;
-                            if (bikeForm[fieldName]) {
-                              payload[fieldName] = parseFloat(bikeForm[fieldName]);
-                            }
-                          }
-                          
-                          // Keep pricePerHour for backward compatibility
-                          if (!bikeForm.pricePerHour && (bikeForm.weekdayRate || bikeForm.weekendRate)) {
-                            const baseRate = bikeForm.weekdayRate || bikeForm.weekendRate;
-                            payload.pricePerHour = parseFloat(baseRate);
-                          } else if (bikeForm.pricePerHour) {
-                            payload.pricePerHour = parseFloat(bikeForm.pricePerHour);
-                          }
+                    // Add tariff fields
+                    payload.weekdayRate = bikeForm.weekdayRate
+                      ? parseFloat(bikeForm.weekdayRate)
+                      : null;
+                    payload.weekendRate = bikeForm.weekendRate
+                      ? parseFloat(bikeForm.weekendRate)
+                      : null;
+                    payload.excessKmCharge = bikeForm.excessKmCharge
+                      ? parseFloat(bikeForm.excessKmCharge)
+                      : null;
+                    payload.kmLimitPerHour = bikeForm.kmLimitPerHour
+                      ? parseFloat(bikeForm.kmLimitPerHour)
+                      : null;
+                    payload.minBookingHours = bikeForm.minBookingHours
+                      ? parseFloat(bikeForm.minBookingHours)
+                      : null;
+                    // Handle GST percentage - allow 0 as a valid value
+                    if (
+                      bikeForm.gstPercentage !== undefined &&
+                      bikeForm.gstPercentage !== null &&
+                      bikeForm.gstPercentage !== ''
+                    ) {
+                      const gstValue = parseFloat(bikeForm.gstPercentage);
+                      payload.gstPercentage = isNaN(gstValue) ? 18.0 : gstValue;
+                    } else {
+                      payload.gstPercentage = 18.0;
+                    }
+
+                    // Add pricing fields
+                    payload.price12Hours = bikeForm.price12Hours
+                      ? parseFloat(bikeForm.price12Hours)
+                      : null;
+                    payload.pricePerWeek = bikeForm.pricePerWeek
+                      ? parseFloat(bikeForm.pricePerWeek)
+                      : null;
+
+                    // Add individual hourly rates for hours 13-24
+                    for (let hour = 13; hour <= 24; hour++) {
+                      const fieldName = `pricePerHour${hour}`;
+                      if (bikeForm[fieldName]) {
+                        payload[fieldName] = parseFloat(bikeForm[fieldName]);
+                      }
+                    }
+
+                    // Keep pricePerHour for backward compatibility
+                    if (!bikeForm.pricePerHour && (bikeForm.weekdayRate || bikeForm.weekendRate)) {
+                      const baseRate = bikeForm.weekdayRate || bikeForm.weekendRate;
+                      payload.pricePerHour = parseFloat(baseRate);
+                    } else if (bikeForm.pricePerHour) {
+                      payload.pricePerHour = parseFloat(bikeForm.pricePerHour);
+                    }
                     if (editingBike) {
                       const updatedBike = await bikesAPI.update(editingBike.id, payload);
                       // Update the bike in the bikes array immediately
-                      setBikes(prevBikes => prevBikes.map(b => b.id === editingBike.id ? updatedBike : b));
+                      setBikes((prevBikes) =>
+                        prevBikes.map((b) => (b.id === editingBike.id ? updatedBike : b))
+                      );
                       toast({ title: 'Bike updated' });
                       setBikeDialogOpen(false);
                       setEditingBike(null);
@@ -2446,13 +3125,19 @@ export default function SuperAdmin() {
                       await loadData();
                     }
                   } catch (e: any) {
-                    toast({ title: 'Error', description: e.message || 'Failed to save bike', variant: 'destructive' });
+                    toast({
+                      title: 'Error',
+                      description: e.message || 'Failed to save bike',
+                      variant: 'destructive',
+                    });
                   }
                 }}
               >
                 {editingBike ? 'Save' : 'Create'}
               </Button>
-              <Button variant="outline" onClick={() => setBikeDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setBikeDialogOpen(false)}>
+                Cancel
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -2467,7 +3152,7 @@ export default function SuperAdmin() {
               Review documents and history for {selectedDocumentUser?.name}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedDocumentUser && (
             <div className="space-y-6">
               {/* User Info */}
@@ -2501,7 +3186,9 @@ export default function SuperAdmin() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Wallet Balance</p>
-                    <p className="font-medium">₹{selectedDocumentUser.walletBalance?.toFixed(2) || '0.00'}</p>
+                    <p className="font-medium">
+                      ₹{selectedDocumentUser.walletBalance?.toFixed(2) || '0.00'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Emergency Contact</p>
@@ -2535,23 +3222,27 @@ export default function SuperAdmin() {
                       <div key={doc.id || doc._id} className="border rounded-lg p-3 sm:p-4 bg-card">
                         <div className="flex items-center justify-between mb-2 sm:mb-3">
                           <div className="min-w-0 flex-1 mr-2">
-                            <p className="font-semibold text-sm truncate">{doc.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+                            <p className="font-semibold text-sm truncate">
+                              {doc.type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </p>
                             <p className="text-xs text-muted-foreground truncate">{doc.name}</p>
                           </div>
-                          <Badge className={`${statusStyles[doc.status as keyof typeof statusStyles].color} shrink-0`}>
+                          <Badge
+                            className={`${statusStyles[doc.status as keyof typeof statusStyles].color} shrink-0`}
+                          >
                             <StatusIcon className="h-3 w-3 mr-1" />
                             <span className="hidden sm:inline">{doc.status}</span>
                           </Badge>
                         </div>
-                        
+
                         {doc.status === 'rejected' && doc.rejectionReason && (
                           <div className="mb-2 px-2 py-1 bg-destructive/5 border border-destructive/10 rounded text-[10px] text-destructive">
                             <span className="font-semibold">Reason:</span> {doc.rejectionReason}
                           </div>
                         )}
-                        
+
                         {/* Document Preview */}
-                        <div 
+                        <div
                           className="mb-2 sm:mb-3 border rounded-lg overflow-hidden bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => {
                             if (doc.url) {
@@ -2561,8 +3252,8 @@ export default function SuperAdmin() {
                           }}
                         >
                           {doc.url && (
-                            <img 
-                              src={doc.url} 
+                            <img
+                              src={doc.url}
                               alt={doc.name}
                               className="w-full h-24 sm:h-32 object-contain"
                               onError={(e) => {
@@ -2578,8 +3269,8 @@ export default function SuperAdmin() {
                           </p>
                           <div className="flex gap-2">
                             {doc.status !== 'rejected' && (
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 className="h-7 px-2 text-[10px] text-destructive hover:text-destructive"
                                 onClick={() => handleDocumentAction(doc.id || doc._id, 'reject')}
@@ -2589,7 +3280,7 @@ export default function SuperAdmin() {
                               </Button>
                             )}
                             {doc.status !== 'approved' && (
-                              <Button 
+                              <Button
                                 size="sm"
                                 className="h-7 px-2 text-[10px] bg-accent hover:bg-accent/90"
                                 onClick={() => handleDocumentAction(doc.id || doc._id, 'approve')}
@@ -2604,7 +3295,9 @@ export default function SuperAdmin() {
                     );
                   })
                 ) : (
-                  <p className="text-muted-foreground text-center py-8 col-span-2">No documents uploaded</p>
+                  <p className="text-muted-foreground text-center py-8 col-span-2">
+                    No documents uploaded
+                  </p>
                 )}
               </div>
 
@@ -2625,26 +3318,41 @@ export default function SuperAdmin() {
                     <tbody className="divide-y divide-border">
                       {selectedDocumentUser.rentals && selectedDocumentUser.rentals.length > 0 ? (
                         selectedDocumentUser.rentals.map((rental: any) => {
-                           const bike = bikes.find(b => b.id === rental.bikeId);
-                           return (
-                             <tr key={rental.id}>
-                               <td className="px-4 py-3 text-sm">{bike?.name || rental.bikeId}</td>
-                               <td className="px-4 py-3 text-sm">{new Date(rental.startTime).toLocaleString()}</td>
-                               <td className="px-4 py-3 text-sm">{rental.endTime ? new Date(rental.endTime).toLocaleString() : '-'}</td>
-                               <td className="px-4 py-3 text-sm">
-                                 <Badge variant="outline" className={statusStyles[rental.status as keyof typeof statusStyles]?.color || 'bg-muted'}>
-                                   {rental.status}
-                                 </Badge>
-                               </td>
-                               <td className="px-4 py-3 text-sm text-right">
-                                 {rental.totalCost || rental.totalAmount ? `₹${rental.totalCost || rental.totalAmount}` : '-'}
-                               </td>
-                             </tr>
-                           );
+                          const bike = bikes.find((b) => b.id === rental.bikeId);
+                          return (
+                            <tr key={rental.id}>
+                              <td className="px-4 py-3 text-sm">{bike?.name || rental.bikeId}</td>
+                              <td className="px-4 py-3 text-sm">
+                                {new Date(rental.startTime).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                {rental.endTime ? new Date(rental.endTime).toLocaleString() : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    statusStyles[rental.status as keyof typeof statusStyles]
+                                      ?.color || 'bg-muted'
+                                  }
+                                >
+                                  {rental.status}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-right">
+                                {rental.totalCost || rental.totalAmount
+                                  ? `₹${rental.totalCost || rental.totalAmount}`
+                                  : '-'}
+                              </td>
+                            </tr>
+                          );
                         })
                       ) : (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                          <td
+                            colSpan={5}
+                            className="px-4 py-8 text-center text-muted-foreground text-sm"
+                          >
                             No ride history found
                           </td>
                         </tr>
@@ -2660,7 +3368,7 @@ export default function SuperAdmin() {
                   Close
                 </Button>
                 {!selectedDocumentUser.isVerified ? (
-                  <Button 
+                  <Button
                     className="bg-accent hover:bg-accent/90"
                     onClick={() => {
                       handleVerifyUser(selectedDocumentUser.id, true);
@@ -2671,7 +3379,7 @@ export default function SuperAdmin() {
                     Verify User
                   </Button>
                 ) : (
-                  <Button 
+                  <Button
                     variant="destructive"
                     onClick={() => {
                       handleVerifyUser(selectedDocumentUser.id, false);
@@ -2694,13 +3402,14 @@ export default function SuperAdmin() {
           <DialogHeader>
             <DialogTitle>Rejection Reason</DialogTitle>
             <DialogDescription>
-              Please provide a reason why this document is being rejected. This will be visible to the user.
+              Please provide a reason why this document is being rejected. This will be visible to
+              the user.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reason">Reason</Label>
-              <Textarea 
+              <Textarea
                 id="reason"
                 placeholder="e.g. Image is blurry, Document is expired, etc."
                 value={rejectionReason}
@@ -2720,57 +3429,63 @@ export default function SuperAdmin() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPreviewModalOpen} onOpenChange={(open) => {
-        setIsPreviewModalOpen(open);
-        if (!open) setZoomScale(1);
-      }}>
+      <Dialog
+        open={isPreviewModalOpen}
+        onOpenChange={(open) => {
+          setIsPreviewModalOpen(open);
+          if (!open) setZoomScale(1);
+        }}
+      >
         <DialogContent className="max-w-5xl w-[95vw] h-[85vh] p-0 overflow-hidden bg-black/95 border-none shadow-2xl flex flex-col">
           <div className="relative flex-1 w-full h-full overflow-auto custom-scrollbar flex items-center justify-center p-4 sm:p-8">
             {previewImageUrl && (
-              <div 
+              <div
                 className="relative transition-all duration-300 ease-in-out flex items-center justify-center min-w-full min-h-full"
-                style={{ 
+                style={{
                   transform: `scale(${zoomScale})`,
-                  transformOrigin: 'center center'
+                  transformOrigin: 'center center',
                 }}
               >
-                <img 
-                  src={previewImageUrl} 
-                  alt="Large Preview" 
+                <img
+                  src={previewImageUrl}
+                  alt="Large Preview"
                   className="max-w-full max-h-full object-contain shadow-2xl animate-in fade-in zoom-in duration-300"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Image+Load+Error';
+                    (e.target as HTMLImageElement).src =
+                      'https://placehold.co/600x400?text=Image+Load+Error';
                   }}
                 />
               </div>
             )}
-            
+
             {/* Floating Zoom Controls - Bottom Center */}
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-9 w-9 text-white hover:bg-white/20 rounded-xl"
-                onClick={() => setZoomScale(prev => Math.max(prev - 0.25, 0.5))}
+                onClick={() => setZoomScale((prev) => Math.max(prev - 0.25, 0.5))}
                 title="Zoom Out"
               >
                 <ZoomOut className="h-5 w-5" />
               </Button>
               <div className="px-3 min-w-[60px] text-center border-x border-white/10">
-                <span className="text-xs font-bold text-white tracking-tight">{Math.round(zoomScale * 100)}%</span>
+                <span className="text-xs font-bold text-white tracking-tight">
+                  {Math.round(zoomScale * 100)}%
+                </span>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-9 w-9 text-white hover:bg-white/20 rounded-xl"
-                onClick={() => setZoomScale(prev => Math.min(prev + 0.25, 4))}
+                onClick={() => setZoomScale((prev) => Math.min(prev + 0.25, 4))}
                 title="Zoom In"
               >
                 <ZoomIn className="h-5 w-5" />
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="ml-1 h-9 w-9 text-white/60 hover:text-white hover:bg-white/20 rounded-xl"
                 onClick={() => setZoomScale(1)}
                 title="Reset Zoom"
@@ -2779,26 +3494,28 @@ export default function SuperAdmin() {
               </Button>
             </div>
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-md z-50 h-10 w-10 border border-white/10"
               onClick={() => setIsPreviewModalOpen(false)}
             >
               <X className="h-6 w-6" />
             </Button>
           </div>
-          
+
           {previewImageUrl && (
             <div className="p-4 bg-black/40 backdrop-blur-md border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4 z-50">
               <div className="flex flex-col max-w-full sm:max-w-[70%]">
-                <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Image Source</p>
+                <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">
+                  Image Source
+                </p>
                 <p className="text-xs font-medium truncate text-white/70">{previewImageUrl}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="bg-white/5 text-white border-white/10 hover:bg-white/10 h-9 px-4 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
                   onClick={() => window.open(previewImageUrl, '_blank')}
                 >

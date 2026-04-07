@@ -19,13 +19,14 @@ export function isWeekend(date: Date): boolean {
 export function hasWeekendPeriod(startDate: Date, endDate: Date): boolean {
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return false;
   if (startDate > endDate) return false;
-  
+
   const current = new Date(startDate);
   const end = new Date(endDate);
-  
+
   // Safety counter
   let days = 0;
-  while (current <= end && days < 100) { // Max 100 days
+  while (current <= end && days < 100) {
+    // Max 100 days
     days++;
     if (isWeekend(current)) {
       return true;
@@ -33,7 +34,7 @@ export function hasWeekendPeriod(startDate: Date, endDate: Date): boolean {
     // Move to next day
     current.setDate(current.getDate() + 1);
   }
-  
+
   return false;
 }
 
@@ -106,7 +107,7 @@ export function calculateRentalPrice(
 
   // Apply weekend surge pricing
   const hasWeekend = hasWeekendPeriod(startDate, endDate);
-  const surgeMultiplier = hasWeekend ? (bike.weekendSurgeMultiplier || 1.0) : 1.0;
+  const surgeMultiplier = hasWeekend ? bike.weekendSurgeMultiplier || 1.0 : 1.0;
   const priceAfterSurge = basePrice * surgeMultiplier;
 
   // Calculate excess km charges
@@ -122,9 +123,10 @@ export function calculateRentalPrice(
 
   // Calculate GST - use the bike's gstPercentage if available, otherwise default to 18%
   // Ensure gstPercentage is a number and handle null/undefined/0 values correctly
-  const gstPercentage = (bike.gstPercentage !== undefined && bike.gstPercentage !== null) 
-    ? Number(bike.gstPercentage) 
-    : 18.0;
+  const gstPercentage =
+    bike.gstPercentage !== undefined && bike.gstPercentage !== null
+      ? Number(bike.gstPercentage)
+      : 18.0;
   const gstAmount = (subtotal * gstPercentage) / 100;
 
   // Calculate total
@@ -158,7 +160,7 @@ function calculateLegacyPrice(
   actualKm: number | null = null
 ): PriceBreakdown {
   const basePrice = (bike.pricePerHour || 0) * durationHours;
-  
+
   // Calculate excess km charges (if kmLimit exists)
   let excessKm = 0;
   let excessKmCharge = 0;
@@ -172,9 +174,10 @@ function calculateLegacyPrice(
   const subtotal = basePrice + excessKmCharge;
   // Calculate GST - use the bike's gstPercentage if available, otherwise default to 18%
   // Ensure gstPercentage is a number and handle null/undefined/0 values correctly
-  const gstPercentage = (bike.gstPercentage !== undefined && bike.gstPercentage !== null) 
-    ? Number(bike.gstPercentage) 
-    : 18.0;
+  const gstPercentage =
+    bike.gstPercentage !== undefined && bike.gstPercentage !== null
+      ? Number(bike.gstPercentage)
+      : 18.0;
   const gstAmount = (subtotal * gstPercentage) / 100;
   const total = subtotal + gstAmount;
 
@@ -207,7 +210,7 @@ export function getAvailablePricingSlabs(bike: Bike): ('hourly' | 'daily' | 'wee
     if (bike.pricingSlabs.daily) available.push('daily');
     if (bike.pricingSlabs.weekly) available.push('weekly');
   }
-  
+
   // Check for tariff fields
   const hasTariff = bike.weekdayRate !== undefined || bike.weekendRate !== undefined;
 
@@ -215,7 +218,6 @@ export function getAvailablePricingSlabs(bike: Bike): ('hourly' | 'daily' | 'wee
   if (available.length === 0 && (bike.pricePerHour || hasTariff)) {
     available.push('hourly');
   }
-  
+
   return available;
 }
-

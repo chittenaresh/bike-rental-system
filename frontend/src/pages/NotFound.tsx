@@ -1,6 +1,6 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
-import { SEO } from "@/components/SEO";
+import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { SEO } from '@/components/SEO';
 
 const NotFound = () => {
   const location = useLocation();
@@ -12,7 +12,7 @@ const NotFound = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted">
-      <SEO 
+      <SEO
         title="404 - Page Not Found"
         description="The page you are looking for does not exist. Return to RideFlow home to find your next bike rental."
       />

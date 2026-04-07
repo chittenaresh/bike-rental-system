@@ -8,7 +8,11 @@ function suppressProxyErrors(): Plugin {
     configureServer() {
       // Override stderr to filter proxy errors
       const originalError = process.stderr.write.bind(process.stderr);
-      process.stderr.write = (chunk: string | Uint8Array, encoding?: BufferEncoding | ((error?: Error | null) => void), cb?: (error?: Error | null) => void) => {
+      process.stderr.write = (
+        chunk: string | Uint8Array,
+        encoding?: BufferEncoding | ((error?: Error | null) => void),
+        cb?: (error?: Error | null) => void
+      ) => {
         const message = chunk?.toString() || '';
         // Suppress specific proxy connection errors
         if (

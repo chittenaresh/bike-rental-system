@@ -22,7 +22,7 @@ export interface Bike {
   // New simple pricing fields
   price12Hours?: number;
   pricePerWeek?: number;
-  
+
   // Tariff Configuration
   weekdayRate?: number; // Mon-Thu hourly rate
   weekendRate?: number; // Fri-Sun hourly rate

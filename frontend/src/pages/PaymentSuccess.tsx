@@ -22,7 +22,7 @@ export default function PaymentSuccess() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SEO 
+      <SEO
         title="Booking Confirmed"
         description="Your bike rental booking has been successfully confirmed. View your booking details and get ready for your ride."
         noindex={true}
@@ -41,7 +41,7 @@ export default function PaymentSuccess() {
               <p className="text-sm text-muted-foreground">Booking ID</p>
               <p className="font-mono font-bold text-lg">{rental.bookingId}</p>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Bike</span>

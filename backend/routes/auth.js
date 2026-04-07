@@ -294,10 +294,7 @@ router.post('/login', async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      if (password.length >= 8) {
-        return res.status(401).json({ message: 'invalid email and password' });
-      }
-      return res.status(401).json({ message: 'invalid mail address' });
+      return res.status(401).json({ message: 'invalid email' });
     }
 
     // Check password

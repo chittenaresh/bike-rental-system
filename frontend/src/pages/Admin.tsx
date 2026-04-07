@@ -336,7 +336,7 @@ export default function Admin() {
   const handleNumericChange = (field: string, value: string) => {
     if (value === '') {
       setBikeForm({ ...bikeForm, [field]: '' });
-      setNumericErrors(prev => ({ ...prev, [field]: '' }));
+      setNumericErrors((prev) => ({ ...prev, [field]: '' }));
       return;
     }
 
@@ -354,25 +354,25 @@ export default function Admin() {
     const regex = /^\d*\.?\d*$/;
 
     if (!regex.test(value)) {
-      setNumericErrors(prev => ({ ...prev, [field]: 'Only numbers are allowed' }));
+      setNumericErrors((prev) => ({ ...prev, [field]: 'Only numbers are allowed' }));
       return;
     }
 
     if (config) {
       const digitOnly = value.split('.')[0];
       if (digitOnly.length > config.maxLen) {
-        setNumericErrors(prev => ({ ...prev, [field]: 'Maximum limit exceeded' }));
+        setNumericErrors((prev) => ({ ...prev, [field]: 'Maximum limit exceeded' }));
         return;
       }
       const num = parseFloat(value);
       if (num > config.maxVal) {
-        setNumericErrors(prev => ({ ...prev, [field]: `Max value is ${config.maxVal}` }));
+        setNumericErrors((prev) => ({ ...prev, [field]: `Max value is ${config.maxVal}` }));
         return;
       }
     }
 
     setBikeForm({ ...bikeForm, [field]: value });
-    setNumericErrors(prev => ({ ...prev, [field]: '' }));
+    setNumericErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
   const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -886,7 +886,9 @@ export default function Admin() {
     if (!selectedLocationId) return false;
     const bikeLocationId =
       bike.locationId && typeof bike.locationId === 'object'
-        ? (bike.locationId as any)?.id || (bike.locationId as any)?._id || (bike.locationId as any)?.toString?.()
+        ? (bike.locationId as any)?.id ||
+          (bike.locationId as any)?._id ||
+          (bike.locationId as any)?.toString?.()
         : bike.locationId;
     return bikeLocationId ? bikeLocationId === selectedLocationId : false;
   });
@@ -1536,7 +1538,9 @@ export default function Admin() {
                     const matchesSearch =
                       q === '' ||
                       (isNumeric
-                        ? (bike.year !== undefined && bike.year !== null && bike.year.toString().includes(q))
+                        ? bike.year !== undefined &&
+                          bike.year !== null &&
+                          bike.year.toString().includes(q)
                         : bike.name.toLowerCase().includes(q) ||
                           (bike.brand && bike.brand.toLowerCase().includes(q)) ||
                           (bike.type && bike.type.toLowerCase().includes(q)));
@@ -1669,7 +1673,7 @@ export default function Admin() {
                         </div>
                       </div>
                     </div>
-                    ));
+                  ));
                 })()}
               </div>
             </div>
@@ -3392,7 +3396,9 @@ export default function Admin() {
                         <div className="flex items-center justify-between mb-2 sm:mb-3">
                           <div className="min-w-0 flex-1 mr-2">
                             <p className="font-semibold text-sm truncate">
-                              {doc.type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                              {doc.type
+                                .replace('_', ' ')
+                                .replace(/\b\w/g, (l: string) => l.toUpperCase())}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">{doc.name}</p>
                           </div>

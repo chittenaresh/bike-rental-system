@@ -143,11 +143,37 @@ router.post('/', authenticateToken, authorize(['admin', 'superadmin']), catchAsy
     type,
     brand,
     year,
-    locationId
+    locationId,
+    image
   } = req.body;
 
-  if (!name || !type || !locationId || !brand || !req.body.image) {
-    return res.status(400).json({ message: 'Required fields missing: name, type, brand, locationId, image' });
+  const missingFields = [];
+  if (!name) missingFields.push('name');
+  if (!type) missingFields.push('type');
+  if (!brand) missingFields.push('brand');
+  if (!locationId) missingFields.push('locationId');
+  if (!image) missingFields.push('image');
+
+  if (missingFields.length > 0) {
+    const fieldLabels = {
+      name: 'Vehicle Name',
+      type: 'Type',
+      brand: 'Brand',
+      locationId: 'Location',
+      image: 'Image'
+    };
+    
+    if (missingFields.length === 1) {
+      return res.status(400).json({ 
+        message: `${fieldLabels[missingFields[0]]} is required`,
+        field: missingFields[0]
+      });
+    }
+    
+    return res.status(400).json({ 
+      message: `Required fields missing: ${missingFields.map(f => fieldLabels[f]).join(', ')}`,
+      fields: missingFields
+    });
   }
 
   // Numeric fields validation

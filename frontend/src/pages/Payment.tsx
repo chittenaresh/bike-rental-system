@@ -20,8 +20,6 @@ interface BookingDetails {
   pricingType?: 'hourly' | 'daily' | 'weekly';
 }
 
-
-
 export default function Payment() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -48,7 +46,8 @@ export default function Payment() {
       if (active) {
         toast({
           title: 'Active Rental Found',
-          description: 'You already have an active rental. Please complete it before booking another.',
+          description:
+            'You already have an active rental. Please complete it before booking another.',
           variant: 'destructive',
         });
         navigate('/'); // Redirect to home
@@ -65,7 +64,11 @@ export default function Payment() {
     }
     const user = getCurrentUser();
     if (!user) {
-      toast({ title: 'Login Required', description: 'Please login to continue payment.', variant: 'destructive' });
+      toast({
+        title: 'Login Required',
+        description: 'Please login to continue payment.',
+        variant: 'destructive',
+      });
       navigate('/auth');
       return;
     }
@@ -78,23 +81,23 @@ export default function Payment() {
         const approvedTypes = (userDocs || [])
           .filter((doc: any) => doc.status === 'approved')
           .map((doc: any) => doc.type);
-        
-        const allVerified = requiredTypes.every(type => approvedTypes.includes(type));
-        
+
+        const allVerified = requiredTypes.every((type) => approvedTypes.includes(type));
+
         if (!allVerified) {
-          toast({ 
-            title: 'Verification Required', 
-            description: 'All documents must be uploaded and verified before booking a ride.', 
-            variant: 'destructive' 
+          toast({
+            title: 'Verification Required',
+            description: 'All documents must be uploaded and verified before booking a ride.',
+            variant: 'destructive',
           });
           navigate('/dashboard?tab=documents');
           return;
         }
       } catch (error: any) {
-        toast({ 
-          title: 'Error', 
-          description: 'Failed to verify documents. Please try again.', 
-          variant: 'destructive' 
+        toast({
+          title: 'Error',
+          description: 'Failed to verify documents. Please try again.',
+          variant: 'destructive',
         });
         navigate('/ride-finder');
       }
@@ -105,8 +108,15 @@ export default function Payment() {
 
   if (!bookingDetails) return null;
 
-  const { bike, pickupTime, dropoffTime, durationHours, totalAmount, pricingType = 'hourly' } = bookingDetails;
-  
+  const {
+    bike,
+    pickupTime,
+    dropoffTime,
+    durationHours,
+    totalAmount,
+    pricingType = 'hourly',
+  } = bookingDetails;
+
   // Calculate price breakdown - use the same logic as Garage.tsx to ensure consistency
   const startDate = new Date(pickupTime);
   const endDate = new Date(dropoffTime);
@@ -114,7 +124,9 @@ export default function Payment() {
   try {
     // Use the same calculation logic as Garage.tsx to ensure consistency
     const hasIndividualRates = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24].some(
-      hour => bike[`pricePerHour${hour}` as keyof typeof bike] && Number(bike[`pricePerHour${hour}` as keyof typeof bike]) > 0
+      (hour) =>
+        bike[`pricePerHour${hour}` as keyof typeof bike] &&
+        Number(bike[`pricePerHour${hour}` as keyof typeof bike]) > 0
     );
     const hasTariff = bike.weekdayRate !== undefined || bike.weekendRate !== undefined;
 
@@ -124,7 +136,7 @@ export default function Payment() {
       // Fallback to legacy pricing slabs
       priceInfo = calculateRentalPrice(bike, startDate, endDate, pricingType || 'hourly');
     }
-    
+
     // Ensure priceInfo is valid
     if (!priceInfo || !priceInfo.total) {
       console.warn('Price calculation returned invalid result, using fallback');
@@ -133,7 +145,7 @@ export default function Payment() {
         gstPercentage: bike.gstPercentage || 18.0,
         gstAmount: (totalAmount / 1.18) * ((bike.gstPercentage || 18.0) / 100),
         total: totalAmount,
-        subtotal: totalAmount / 1.18
+        subtotal: totalAmount / 1.18,
       };
     }
   } catch (error) {
@@ -146,7 +158,7 @@ export default function Payment() {
       gstPercentage: gstPct,
       gstAmount: base * (gstPct / 100),
       total: totalAmount,
-      subtotal: base
+      subtotal: base,
     };
   }
 
@@ -178,10 +190,10 @@ export default function Payment() {
                 totalAmount: finalAmount,
                 pricingType,
                 selectedLocationId,
-                additionalImages: []
-              }
+                additionalImages: [],
+              },
             });
-            
+
             if (result.success) {
               navigate('/payment-success', { state: { rental: result.rental, bike } });
             } else {
@@ -202,11 +214,11 @@ export default function Payment() {
         prefill: {
           name: 'RideFlow User',
           email: 'user@example.com',
-          contact: '9999999999'
+          contact: '9999999999',
         },
         theme: {
-          color: '#F97316'
-        }
+          color: '#F97316',
+        },
       };
 
       const rzp1 = new (window as any).Razorpay(options);
@@ -224,7 +236,7 @@ export default function Payment() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SEO 
+      <SEO
         title="Complete Your Booking"
         description="Securely complete your bike rental booking on RideFlow. Proceed to payment."
         noindex={true}
@@ -260,13 +272,19 @@ export default function Payment() {
                     </div>
                     {priceInfo.hasWeekend && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Weekend Surge ({((priceInfo.surgeMultiplier - 1) * 100).toFixed(0)}%)</span>
-                        <span className="font-medium text-accent">+₹{(priceInfo.priceAfterSurge - priceInfo.basePrice).toFixed(2)}</span>
+                        <span className="text-muted-foreground">
+                          Weekend Surge ({((priceInfo.surgeMultiplier - 1) * 100).toFixed(0)}%)
+                        </span>
+                        <span className="font-medium text-accent">
+                          +₹{(priceInfo.priceAfterSurge - priceInfo.basePrice).toFixed(2)}
+                        </span>
                       </div>
                     )}
                     {priceInfo.excessKm > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Excess KM ({priceInfo.excessKm} km)</span>
+                        <span className="text-muted-foreground">
+                          Excess KM ({priceInfo.excessKm} km)
+                        </span>
                         <span className="font-medium">+₹{priceInfo.excessKmCharge.toFixed(2)}</span>
                       </div>
                     )}
@@ -275,7 +293,9 @@ export default function Payment() {
                       <span className="font-medium">₹{priceInfo.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">GST ({priceInfo.gstPercentage}%)</span>
+                      <span className="text-muted-foreground">
+                        GST ({priceInfo.gstPercentage}%)
+                      </span>
                       <span className="font-medium">+₹{priceInfo.gstAmount.toFixed(2)}</span>
                     </div>
                   </div>
@@ -284,17 +304,16 @@ export default function Payment() {
               <hr />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total Amount</span>
-                <span>₹{priceInfo ? priceInfo.total.toFixed(2) : (totalAmount || 0).toFixed(2)}</span>
+                <span>
+                  ₹{priceInfo ? priceInfo.total.toFixed(2) : (totalAmount || 0).toFixed(2)}
+                </span>
               </div>
             </CardContent>
             <CardFooter>
-              <Button 
-                className="w-full" 
-                size="lg" 
-                onClick={handlePayment}
-                disabled={loading}
-              >
-                {loading ? 'Processing...' : `Pay ₹${(priceInfo ? priceInfo.total : (totalAmount || 0)).toFixed(2)}`}
+              <Button className="w-full" size="lg" onClick={handlePayment} disabled={loading}>
+                {loading
+                  ? 'Processing...'
+                  : `Pay ₹${(priceInfo ? priceInfo.total : totalAmount || 0).toFixed(2)}`}
               </Button>
             </CardFooter>
           </Card>

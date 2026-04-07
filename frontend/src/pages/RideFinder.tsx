@@ -7,12 +7,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Bike } from '@/types';
 import { Search, Zap, Gauge, Bike as BikeIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { bikesAPI, rentalsAPI, getCurrentUser, documentsAPI, authAPI, locationsAPI } from '@/lib/api';
+import {
+  bikesAPI,
+  rentalsAPI,
+  getCurrentUser,
+  documentsAPI,
+  locationsAPI,
+} from '@/lib/api';
 import { calculateRentalPrice, getAvailablePricingSlabs } from '@/utils/priceCalculator';
 import { calculateSimplePrice } from '@/utils/simplePriceCalculator';
 import { SEO } from '@/components/SEO';
@@ -39,7 +57,9 @@ export default function RideFinder() {
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   const [isBookingConfirmationOpen, setIsBookingConfirmationOpen] = useState(false);
   const [selectedBike, setSelectedBike] = useState<Bike | null>(null);
-  const [selectedPricingType, setSelectedPricingType] = useState<'hourly' | 'daily' | 'weekly'>('hourly');
+  const [selectedPricingType, setSelectedPricingType] = useState<'hourly' | 'daily' | 'weekly'>(
+    'hourly'
+  );
   const [sortBy, setSortBy] = useState<'relevance' | 'priceLow' | 'priceHigh'>('relevance');
   const [docStatus, setDocStatus] = useState({ allApproved: false, hasDocs: false });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -62,12 +82,12 @@ export default function RideFinder() {
       const approvedTypes = (userDocs || [])
         .filter((doc: any) => doc.status === 'approved')
         .map((doc: any) => doc.type);
-      
-      const allApproved = requiredTypes.every(type => approvedTypes.includes(type));
+
+      const allApproved = requiredTypes.every((type) => approvedTypes.includes(type));
       const hasDocs = userDocs && userDocs.length > 0;
       setDocStatus({ allApproved, hasDocs });
     } catch (error) {
-      console.error("Failed to check documents", error);
+      console.error('Failed to check documents', error);
     }
   };
 
@@ -98,9 +118,9 @@ export default function RideFinder() {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to load bikes",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to load bikes',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -125,7 +145,9 @@ export default function RideFinder() {
     return sortBy === 'relevance'
       ? filteredBikes
       : [...filteredBikes].sort((a, b) =>
-          sortBy === 'priceLow' ? getSortPrice(a) - getSortPrice(b) : getSortPrice(b) - getSortPrice(a)
+          sortBy === 'priceLow'
+            ? getSortPrice(a) - getSortPrice(b)
+            : getSortPrice(b) - getSortPrice(a)
         );
   }, [filteredBikes, sortBy]);
 
@@ -137,10 +159,11 @@ export default function RideFinder() {
   const { todayStr, nowHHMM, toHHMM, now } = useMemo(() => {
     const d = new Date();
     const tStr = d.toISOString().slice(0, 10);
-    const f = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const f = (date: Date) =>
+      `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     return { todayStr: tStr, nowHHMM: f(d), toHHMM: f, now: d };
   }, []); // Only calculate once on mount to keep identities stable
-  
+
   const pickupTimeMin = useMemo(() => {
     return pickupDate === todayStr ? nowHHMM : '00:00';
   }, [pickupDate, todayStr, nowHHMM]);
@@ -151,7 +174,7 @@ export default function RideFinder() {
     if (!dt || isNaN(dt.getTime())) return null;
     return dt;
   }, [pickupDate, pickupTime]);
-  
+
   const dropoffTimeMin = useMemo(() => {
     const baseDropMinDate = dropoffDate === todayStr ? nowHHMM : '00:00';
     return dropoffDate && pickupDT && dropoffDate === pickupDate
@@ -164,7 +187,7 @@ export default function RideFinder() {
     if (!dt || isNaN(dt.getTime())) return null;
     return dt;
   }, [dropoffDate, dropoffTime]);
-  
+
   // Calculate total duration in minutes
   const durationMinutes = useMemo(() => {
     if (!pickupDT || !dropoffDT) return 0;
@@ -174,19 +197,19 @@ export default function RideFinder() {
   }, [pickupDT, dropoffDT]);
 
   const durationHours = useMemo(() => durationMinutes / 60, [durationMinutes]);
-  
+
   // Calculate max pickup date (7 days from today) - use useMemo to ensure it updates
   const maxPickupDate = useMemo(() => {
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 7); // 7 days from today
     return maxDate.toISOString().slice(0, 10);
   }, []);
-  
+
   // Calculate max dropoff date (up to 7 days window)
   const maxDropoffDate = useMemo(() => {
     if (!pickupDate) {
       const maxDate = new Date();
-      maxDate.setDate(maxDate.getDate() + 14); 
+      maxDate.setDate(maxDate.getDate() + 14);
       return maxDate.toISOString().slice(0, 10);
     }
     const pickup = new Date(pickupDate);
@@ -194,8 +217,12 @@ export default function RideFinder() {
     return pickup.toISOString().slice(0, 10);
   }, [pickupDate]);
 
-  const minutesToHHMM = useCallback((m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`, []);
-  
+  const minutesToHHMM = useCallback(
+    (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`,
+    []
+  );
+
   const format12h = useCallback((t: string) => {
     if (!t || typeof t !== 'string') return '';
     const parts = t.split(':');
@@ -211,45 +238,47 @@ export default function RideFinder() {
   // Pre-calculate all possible 30-minute time slots in a day
   const allTimeOptions = useMemo(() => {
     const opts: string[] = [];
-    const f = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const f = (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
     for (let m = 0; m < 24 * 60; m += 30) {
       opts.push(f(m));
     }
     return opts;
-  }, []); 
+  }, []);
 
   // `generateTimes` is now a lightweight slice operation on the pre-calculated options
-  const generateTimes = useCallback((minHHMM: string) => {
-    if (!minHHMM || typeof minHHMM !== 'string') return allTimeOptions;
-    
-    const parts = minHHMM.split(':');
-    if (parts.length < 2) return allTimeOptions;
-    
-    let h = parseInt(parts[0], 10);
-    let m = parseInt(parts[1], 10);
-    
-    if (isNaN(h)) h = 0;
-    if (isNaN(m)) m = 0;
-    
-    const startMin = (h * 60) + m;
-    // Round up to the nearest 30-minute mark and clamp the value
-    const roundedMin = Math.min(23 * 60 + 30, Math.max(0, Math.ceil(startMin / 30) * 30));
-    
-    const startTime = minutesToHHMM(roundedMin);
-    const startIndex = allTimeOptions.indexOf(startTime);
+  const generateTimes = useCallback(
+    (minHHMM: string) => {
+      if (!minHHMM || typeof minHHMM !== 'string') return allTimeOptions;
 
-    if (startIndex === -1) {
-      // If we can't find the exact time, filter manually for safety
-      return allTimeOptions.filter(t => {
-        const [th, tm] = t.split(':').map(n => parseInt(n, 10));
-        return (th * 60 + tm) >= startMin;
-      });
-    }
-    
-    return allTimeOptions.slice(startIndex);
-  }, [allTimeOptions, minutesToHHMM]);
+      const parts = minHHMM.split(':');
+      if (parts.length < 2) return allTimeOptions;
 
+      let h = parseInt(parts[0], 10);
+      let m = parseInt(parts[1], 10);
 
+      if (isNaN(h)) h = 0;
+      if (isNaN(m)) m = 0;
+
+      const startMin = h * 60 + m;
+      // Round up to the nearest 30-minute mark and clamp the value
+      const roundedMin = Math.min(23 * 60 + 30, Math.max(0, Math.ceil(startMin / 30) * 30));
+
+      const startTime = minutesToHHMM(roundedMin);
+      const startIndex = allTimeOptions.indexOf(startTime);
+
+      if (startIndex === -1) {
+        // If we can't find the exact time, filter manually for safety
+        return allTimeOptions.filter((t) => {
+          const [th, tm] = t.split(':').map((n) => parseInt(n, 10));
+          return th * 60 + tm >= startMin;
+        });
+      }
+
+      return allTimeOptions.slice(startIndex);
+    },
+    [allTimeOptions, minutesToHHMM]
+  );
 
   const applyTimeFilter = () => {
     if (!pickupDate || !pickupTime || !dropoffDate || !dropoffTime) {
@@ -271,7 +300,11 @@ export default function RideFinder() {
 
   const searchAvailable = async () => {
     if (!pickupDate || !pickupTime || !dropoffDate || !dropoffTime) {
-      toast({ title: 'Select Date & Time', description: 'Please choose pickup and dropoff.', variant: 'destructive' });
+      toast({
+        title: 'Select Date & Time',
+        description: 'Please choose pickup and dropoff.',
+        variant: 'destructive',
+      });
       return;
     }
     const start = new Date(`${pickupDate}T${pickupTime}`);
@@ -283,7 +316,11 @@ export default function RideFinder() {
       setBikes(available);
       setIsSearchDialogOpen(false);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to fetch availability', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch availability',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -292,7 +329,11 @@ export default function RideFinder() {
   const handleRent = async (bike: Bike, pricingType?: 'hourly' | 'daily' | 'weekly') => {
     const user = getCurrentUser();
     if (!user) {
-      toast({ title: 'Login Required', description: 'Please login to book a ride.', variant: 'destructive' });
+      toast({
+        title: 'Login Required',
+        description: 'Please login to book a ride.',
+        variant: 'destructive',
+      });
       navigate('/auth');
       return;
     }
@@ -309,23 +350,23 @@ export default function RideFinder() {
       const approvedTypes = (userDocs || [])
         .filter((doc: any) => doc.status === 'approved')
         .map((doc: any) => doc.type);
-      
-      const allVerified = requiredTypes.every(type => approvedTypes.includes(type));
-      
+
+      const allVerified = requiredTypes.every((type) => approvedTypes.includes(type));
+
       if (!allVerified) {
-        toast({ 
-          title: 'Verification Required', 
-          description: 'All documents must be uploaded and verified before booking a ride.', 
-          variant: 'destructive' 
+        toast({
+          title: 'Verification Required',
+          description: 'All documents must be uploaded and verified before booking a ride.',
+          variant: 'destructive',
         });
         navigate('/dashboard?tab=documents');
         return;
       }
     } catch (error: any) {
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to verify documents. Please try again.', 
-        variant: 'destructive' 
+      toast({
+        title: 'Error',
+        description: 'Failed to verify documents. Please try again.',
+        variant: 'destructive',
       });
       return;
     }
@@ -351,7 +392,11 @@ export default function RideFinder() {
     const user = getCurrentUser();
     if (!user) {
       setIsBookingConfirmationOpen(false);
-      toast({ title: 'Login Required', description: 'Please login to confirm your booking.', variant: 'destructive' });
+      toast({
+        title: 'Login Required',
+        description: 'Please login to confirm your booking.',
+        variant: 'destructive',
+      });
       navigate('/auth');
       return;
     }
@@ -370,7 +415,8 @@ export default function RideFinder() {
       if (active) {
         toast({
           title: 'Active Rental Found',
-          description: 'You already have an active rental. Please complete it before booking another.',
+          description:
+            'You already have an active rental. Please complete it before booking another.',
           variant: 'destructive',
         });
         setIsBookingConfirmationOpen(false);
@@ -379,43 +425,54 @@ export default function RideFinder() {
     } catch (error) {
       console.error('Failed to check active rental', error);
     }
-    
+
     // Validate bike is in selected location
     const selectedLocationId = localStorage.getItem('selectedLocation');
     if (selectedLocationId) {
       const rawBikeLocationId: unknown = (selectedBike as any).locationId;
       const bikeLocationId =
         typeof rawBikeLocationId === 'object' && rawBikeLocationId
-          ? (rawBikeLocationId as any).id || (rawBikeLocationId as any)._id || (rawBikeLocationId as any).toString?.()
+          ? (rawBikeLocationId as any).id ||
+            (rawBikeLocationId as any)._id ||
+            (rawBikeLocationId as any).toString?.()
           : typeof rawBikeLocationId === 'string'
             ? rawBikeLocationId
             : null;
-      
+
       if (bikeLocationId !== selectedLocationId) {
         toast({
           title: 'Location Mismatch',
-          description: 'This bike is not available in your selected location. Please select a bike from your location.',
+          description:
+            'This bike is not available in your selected location. Please select a bike from your location.',
           variant: 'destructive',
         });
         setIsBookingConfirmationOpen(false);
         return;
       }
     }
-    
+
     // Calculate duration and amount using new simple pricing model or legacy
     const start = pickupDT || new Date(`${pickupDate}T${pickupTime}`);
     const end = dropoffDT || new Date(`${dropoffDate}T${dropoffTime}`);
     const hours = durationHours;
-    
+
     let totalAmount = 0;
     try {
       // Try new simple pricing model first
       const hasIndividualRates = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24].some(
-        hour => selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike] && Number(selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike]) > 0
+        (hour) =>
+          selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike] &&
+          Number(selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike]) > 0
       );
-      const hasTariff = selectedBike.weekdayRate !== undefined || selectedBike.weekendRate !== undefined;
+      const hasTariff =
+        selectedBike.weekdayRate !== undefined || selectedBike.weekendRate !== undefined;
 
-      if (selectedBike.price12Hours || hasIndividualRates || selectedBike.pricePerWeek || hasTariff) {
+      if (
+        selectedBike.price12Hours ||
+        hasIndividualRates ||
+        selectedBike.pricePerWeek ||
+        hasTariff
+      ) {
         const priceInfo = calculateSimplePrice(selectedBike, start, end);
         totalAmount = Math.round(priceInfo.total);
       } else {
@@ -442,64 +499,82 @@ export default function RideFinder() {
           dropoffTime: end.toISOString(),
           durationHours: hours,
           totalAmount,
-          pricingType: selectedPricingType
-        }
-      }
+          pricingType: selectedPricingType,
+        },
+      },
     });
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO 
-        title={locationName ? `Rent a Bike in ${locationName} - Best Prices & Wide Selection` : "Ride Finder - Available Bikes for Rent"}
-        description={locationName ? `Book the perfect bike for your next ride in ${locationName}. Choose from electric bikes, mountain bikes, and scooters. Flexible rental plans starting at ₹10/hr in ${locationName}.` : "Find and book the perfect bike for your next ride. Browse our extensive garage of electric bikes, mountain bikes, and scooters available for rent."}
-        keywords={locationName ? `bike rental ${locationName}, rent motorcycle ${locationName}, scooter hire ${locationName}, RideFlow ${locationName}` : "find bike rental, book motorcycle online, electric bike finder, scooter rental search, RideFlow garage"}
+      <SEO
+        title={
+          locationName
+            ? `Rent a Bike in ${locationName} - Best Prices & Wide Selection`
+            : 'Ride Finder - Available Bikes for Rent'
+        }
+        description={
+          locationName
+            ? `Book the perfect bike for your next ride in ${locationName}. Choose from electric bikes, mountain bikes, and scooters. Flexible rental plans starting at ₹10/hr in ${locationName}.`
+            : 'Find and book the perfect bike for your next ride. Browse our extensive garage of electric bikes, mountain bikes, and scooters available for rent.'
+        }
+        keywords={
+          locationName
+            ? `bike rental ${locationName}, rent motorcycle ${locationName}, scooter hire ${locationName}, RideFlow ${locationName}`
+            : 'find bike rental, book motorcycle online, electric bike finder, scooter rental search, RideFlow garage'
+        }
         schema={[
           {
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            "name": locationName ? `Available Bikes for Rent in ${locationName}` : "Available Bikes for Rent",
-            "description": locationName ? `List of motorcycles and scooters available for rent in ${locationName} at RideFlow.` : "List of premium motorcycles and scooters available for rent at RideFlow.",
-            "itemListElement": bikes.slice(0, 10).map((bike, index) => ({
-              "@type": "ListItem",
-              "position": index + 1,
-              "item": {
-                "@type": "Product",
-                "name": bike.name,
-                "image": bike.image?.startsWith('http') ? bike.image : "https://rideflow.com" + (bike.image?.startsWith('/') ? '' : '/') + bike.image,
-                "description": `${bike.brand} ${bike.type} bike available for rent in ${locationName || 'your city'}. Flexible hourly and daily plans.`,
-                "brand": {
-                  "@type": "Brand",
-                  "name": bike.brand
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: locationName
+              ? `Available Bikes for Rent in ${locationName}`
+              : 'Available Bikes for Rent',
+            description: locationName
+              ? `List of motorcycles and scooters available for rent in ${locationName} at RideFlow.`
+              : 'List of premium motorcycles and scooters available for rent at RideFlow.',
+            itemListElement: bikes.slice(0, 10).map((bike, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              item: {
+                '@type': 'Product',
+                name: bike.name,
+                image: bike.image?.startsWith('http')
+                  ? bike.image
+                  : 'https://rideflow.com' + (bike.image?.startsWith('/') ? '' : '/') + bike.image,
+                description: `${bike.brand} ${bike.type} bike available for rent in ${locationName || 'your city'}. Flexible hourly and daily plans.`,
+                brand: {
+                  '@type': 'Brand',
+                  name: bike.brand,
                 },
-                "offers": {
-                  "@type": "Offer",
-                  "priceCurrency": "INR",
-                  "price": bike.weekdayRate || bike.pricePerHour || 0,
-                  "availability": "https://schema.org/InStock",
-                  "url": `https://rideflow.com/ride-finder?bikeId=${bike.id}`
-                }
-              }
-            }))
+                offers: {
+                  '@type': 'Offer',
+                  priceCurrency: 'INR',
+                  price: bike.weekdayRate || bike.pricePerHour || 0,
+                  availability: 'https://schema.org/InStock',
+                  url: `https://rideflow.com/ride-finder?bikeId=${bike.id}`,
+                },
+              },
+            })),
           },
           {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            "itemListElement": [
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
               {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Home",
-                "item": "https://rideflow.com"
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: 'https://rideflow.com',
               },
               {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "Ride Finder",
-                "item": "https://rideflow.com/ride-finder"
-              }
-            ]
-          }
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Ride Finder',
+                item: 'https://rideflow.com/ride-finder',
+              },
+            ],
+          },
         ]}
       />
       <Navbar />
@@ -509,13 +584,12 @@ export default function RideFinder() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-display font-bold mb-4">
-              {locationName ? `Bikes for Rent in ${locationName}` : "Ride Finder"}
+              {locationName ? `Bikes for Rent in ${locationName}` : 'Ride Finder'}
             </h1>
             <p className="text-muted-foreground max-w-2xl">
-              {locationName 
+              {locationName
                 ? `Explore the best bike rental options in ${locationName}. Our garage features top-rated motorcycles and scooters, all inclusive of insurance and roadside assistance.`
-                : "Browse our collection of premium bikes. Each bike comes with full insurance, a helmet, and 24/7 roadside assistance."
-              }
+                : 'Browse our collection of premium bikes. Each bike comes with full insurance, a helmet, and 24/7 roadside assistance.'}
             </p>
           </div>
 
@@ -565,7 +639,11 @@ export default function RideFinder() {
                         onValueChange={(val) => {
                           let t = val;
                           const proposed = getDateTime(pickupDate, t);
-                          if (pickupDate === todayStr && proposed && proposed.getTime() < now.getTime()) {
+                          if (
+                            pickupDate === todayStr &&
+                            proposed &&
+                            proposed.getTime() < now.getTime()
+                          ) {
                             t = nowHHMM;
                           }
                           setPickupTime(t);
@@ -576,7 +654,9 @@ export default function RideFinder() {
                         </SelectTrigger>
                         <SelectContent>
                           {generateTimes(pickupTimeMin).map((t) => (
-                            <SelectItem key={t} value={t}>{format12h(t)}</SelectItem>
+                            <SelectItem key={t} value={t}>
+                              {format12h(t)}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -606,7 +686,11 @@ export default function RideFinder() {
                         onValueChange={(val) => {
                           let t = val;
                           const proposed = getDateTime(dropoffDate, t);
-                          if (dropoffDate === todayStr && proposed && proposed.getTime() < now.getTime()) {
+                          if (
+                            dropoffDate === todayStr &&
+                            proposed &&
+                            proposed.getTime() < now.getTime()
+                          ) {
                             t = nowHHMM;
                           }
                           setDropoffTime(t);
@@ -617,7 +701,9 @@ export default function RideFinder() {
                         </SelectTrigger>
                         <SelectContent>
                           {generateTimes(dropoffTimeMin).map((t) => (
-                            <SelectItem key={t} value={t}>{format12h(t)}</SelectItem>
+                            <SelectItem key={t} value={t}>
+                              {format12h(t)}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -625,7 +711,9 @@ export default function RideFinder() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button size="sm" className="flex-1" onClick={applyTimeFilter}>Apply filter</Button>
+                    <Button size="sm" className="flex-1" onClick={applyTimeFilter}>
+                      Apply filter
+                    </Button>
                     <div className="text-xs text-muted-foreground whitespace-nowrap">
                       {durationMinutes ? `${durationMinutes} Minutes` : '0 Minutes'}
                     </div>
@@ -693,7 +781,8 @@ export default function RideFinder() {
               {/* Results Count */}
               <div className="mb-6">
                 <p className="text-muted-foreground">
-                  Showing <span className="font-semibold text-foreground">{bikesToShow.length}</span> bikes
+                  Showing{' '}
+                  <span className="font-semibold text-foreground">{bikesToShow.length}</span> bikes
                 </p>
               </div>
 
@@ -711,8 +800,8 @@ export default function RideFinder() {
                         className="animate-slide-up"
                         style={{ animationDelay: `${index * 0.05}s` }}
                       >
-                        <BikeCard 
-                          bike={bike} 
+                        <BikeCard
+                          bike={bike}
                           onRent={handleRent}
                           pickupDateTime={pickupDT || undefined}
                           dropoffDateTime={dropoffDT || undefined}
@@ -741,8 +830,12 @@ export default function RideFinder() {
           {/* Mobile bottom bar */}
           <div className="md:hidden fixed bottom-4 left-4 right-4 z-40">
             <div className="bg-card rounded-2xl shadow-card flex items-center justify-between px-4 py-3">
-              <Button variant="ghost" size="sm" onClick={() => setIsSearchDialogOpen(true)}>FILTER</Button>
-              <div className="text-xs text-muted-foreground">{durationMinutes ? `${durationMinutes} Minutes` : '0 Minutes'}</div>
+              <Button variant="ghost" size="sm" onClick={() => setIsSearchDialogOpen(true)}>
+                FILTER
+              </Button>
+              <div className="text-xs text-muted-foreground">
+                {durationMinutes ? `${durationMinutes} Minutes` : '0 Minutes'}
+              </div>
             </div>
           </div>
 
@@ -756,15 +849,14 @@ export default function RideFinder() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-
                 <div>
                   <Label className="text-sm">Pickup</Label>
                   <div className="flex items-center gap-2">
-                    <Input 
-                      type="date" 
+                    <Input
+                      type="date"
                       min={todayStr}
                       max={maxPickupDate}
-                      value={pickupDate} 
+                      value={pickupDate}
                       onChange={(e) => {
                         const val = e.target.value;
                         const minVal = todayStr;
@@ -795,7 +887,9 @@ export default function RideFinder() {
                       </SelectTrigger>
                       <SelectContent>
                         {generateTimes(pickupTimeMin).map((t) => (
-                          <SelectItem key={t} value={t}>{format12h(t)}</SelectItem>
+                          <SelectItem key={t} value={t}>
+                            {format12h(t)}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -804,18 +898,18 @@ export default function RideFinder() {
                 <div>
                   <Label className="text-sm">Dropoff</Label>
                   <div className="flex items-center gap-2">
-                    <Input 
-                      type="date" 
+                    <Input
+                      type="date"
                       min={todayStr}
                       max={maxDropoffDate || undefined}
-                      value={dropoffDate} 
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          const minVal = todayStr;
-                          let finalVal = val;
-                          if (val < minVal) finalVal = minVal;
-                          setDropoffDate(finalVal);
-                        }}
+                      value={dropoffDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const minVal = todayStr;
+                        let finalVal = val;
+                        if (val < minVal) finalVal = minVal;
+                        setDropoffDate(finalVal);
+                      }}
                       onClick={(e) => e.currentTarget.showPicker?.()}
                       className="cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                     />
@@ -830,13 +924,17 @@ export default function RideFinder() {
                       </SelectTrigger>
                       <SelectContent>
                         {generateTimes(dropoffTimeMin).map((t) => (
-                          <SelectItem key={t} value={t}>{format12h(t)}</SelectItem>
+                          <SelectItem key={t} value={t}>
+                            {format12h(t)}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <Button className="w-full" onClick={searchAvailable}>Search</Button>
+                <Button className="w-full" onClick={searchAvailable}>
+                  Search
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -846,128 +944,173 @@ export default function RideFinder() {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Confirm Booking</DialogTitle>
-                <DialogDescription>
-                  Please review your booking details below.
-                </DialogDescription>
+                <DialogDescription>Please review your booking details below.</DialogDescription>
               </DialogHeader>
-              {selectedBike && (() => {
-                const availableSlabs = getAvailablePricingSlabs(selectedBike);
-                const start = pickupDT;
-                const end = dropoffDT;
-                const hours = durationHours;
-                
-                let priceInfo: any = null;
-                if (start && end) {
-                  try {
-                    // Try new simple pricing model first (same logic as BikeCard)
-                    const hasIndividualRates = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24].some(
-                      hour => selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike] && Number(selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike]) > 0
-                    );
-                    const hasTariff = selectedBike.weekdayRate !== undefined || selectedBike.weekendRate !== undefined;
-                    
-                    if (selectedBike.price12Hours || hasIndividualRates || selectedBike.pricePerWeek || hasTariff) {
-                      priceInfo = calculateSimplePrice(selectedBike, start, end);
-                    } else {
-                      priceInfo = calculateRentalPrice(selectedBike, start, end, selectedPricingType);
+              {selectedBike &&
+                (() => {
+                  const availableSlabs = getAvailablePricingSlabs(selectedBike);
+                  const start = pickupDT;
+                  const end = dropoffDT;
+                  const hours = durationHours;
+
+                  let priceInfo: any = null;
+                  if (start && end) {
+                    try {
+                      // Try new simple pricing model first (same logic as BikeCard)
+                      const hasIndividualRates = [
+                        13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+                      ].some(
+                        (hour) =>
+                          selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike] &&
+                          Number(selectedBike[`pricePerHour${hour}` as keyof typeof selectedBike]) >
+                            0
+                      );
+                      const hasTariff =
+                        selectedBike.weekdayRate !== undefined ||
+                        selectedBike.weekendRate !== undefined;
+
+                      if (
+                        selectedBike.price12Hours ||
+                        hasIndividualRates ||
+                        selectedBike.pricePerWeek ||
+                        hasTariff
+                      ) {
+                        priceInfo = calculateSimplePrice(selectedBike, start, end);
+                      } else {
+                        priceInfo = calculateRentalPrice(
+                          selectedBike,
+                          start,
+                          end,
+                          selectedPricingType
+                        );
+                      }
+                    } catch (error) {
+                      console.error('Price calculation error:', error);
                     }
-                  } catch (error) {
-                    console.error('Price calculation error:', error);
                   }
-                }
-                const currentSlab = selectedBike.pricingSlabs?.[selectedPricingType];
-                // Display static kmLimit value (not calculated includedKm) for user visibility
-                const displayKmLimit = selectedBike.kmLimit || currentSlab?.included_km || 0;
+                  const currentSlab = selectedBike.pricingSlabs?.[selectedPricingType];
+                  // Display static kmLimit value (not calculated includedKm) for user visibility
+                  const displayKmLimit = selectedBike.kmLimit || currentSlab?.included_km || 0;
 
-                return (
-                  <div className="space-y-4">
-                    <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-                      <div className="flex items-center gap-4">
-                        {selectedBike.image ? (
-                           <img src={selectedBike.image} alt={selectedBike.name} className="w-16 h-16 object-cover rounded-md" />
-                        ) : (
-                          <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
-                            <BikeIcon className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div>
-                          <h4 className="font-semibold">{selectedBike.name}</h4>
-                          <p className="text-sm text-muted-foreground capitalize">{selectedBike.type} Bike</p>
-                        </div>
-                      </div>
-                      
-                      {/* Pricing Type Selection */}
-                      {availableSlabs.length > 1 && (
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-2">Pricing Type</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {availableSlabs.map((slab) => (
-                              <Button
-                                key={slab}
-                                type="button"
-                                variant={selectedPricingType === slab ? 'default' : 'outline'}
-                                size="sm"
-                                className="text-xs capitalize"
-                                onClick={() => setSelectedPricingType(slab)}
-                              >
-                                {slab}
-                              </Button>
-                            ))}
+                  return (
+                    <div className="space-y-4">
+                      <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                        <div className="flex items-center gap-4">
+                          {selectedBike.image ? (
+                            <img
+                              src={selectedBike.image}
+                              alt={selectedBike.name}
+                              className="w-16 h-16 object-cover rounded-md"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
+                              <BikeIcon className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="font-semibold">{selectedBike.name}</h4>
+                            <p className="text-sm text-muted-foreground capitalize">
+                              {selectedBike.type} Bike
+                            </p>
                           </div>
                         </div>
-                      )}
 
-                      <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-border/50">
-                        <div>
-                          <span className="text-muted-foreground block">Pickup</span>
-                          <span className="font-medium">{new Date(pickupDate).toLocaleDateString()} {format12h(pickupTime)}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground block">Dropoff</span>
-                          <span className="font-medium">{new Date(dropoffDate).toLocaleDateString()} {format12h(dropoffTime)}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground block">Duration</span>
-                          <span className="font-medium">{Math.round(hours)} hours ({durationMinutes} mins)</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground block">KM Limit</span>
-                          <span className="font-medium">{displayKmLimit} km</span>
-                        </div>
-                        {priceInfo && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground block">Pricing Breakdown</span>
-                            <div className="text-sm font-medium space-y-1">
-                              <div>{priceInfo.breakdown || `Base: ₹${priceInfo.basePrice?.toFixed(2) || 0}`}</div>
-                              {priceInfo.gstAmount && priceInfo.gstAmount > 0 && (
-                                <div className="text-xs text-muted-foreground">
-                                  GST ({priceInfo.gstPercentage || 18}%): +₹{priceInfo.gstAmount.toFixed(2)}
-                                </div>
-                              )}
+                        {/* Pricing Type Selection */}
+                        {availableSlabs.length > 1 && (
+                          <div>
+                            <label className="text-xs text-muted-foreground block mb-2">
+                              Pricing Type
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {availableSlabs.map((slab) => (
+                                <Button
+                                  key={slab}
+                                  type="button"
+                                  variant={selectedPricingType === slab ? 'default' : 'outline'}
+                                  size="sm"
+                                  className="text-xs capitalize"
+                                  onClick={() => setSelectedPricingType(slab)}
+                                >
+                                  {slab}
+                                </Button>
+                              ))}
                             </div>
                           </div>
                         )}
-                        {priceInfo && (
-                          <div className="col-span-2 pt-2 border-t">
-                            <span className="text-muted-foreground block">Total Amount</span>
-                            <span className="font-bold text-xl text-primary">₹{Math.round(priceInfo.total)}</span>
-                            {priceInfo.hasWeekend && (
-                              <span className="text-xs text-accent block">(Weekend surge applied)</span>
-                            )}
+
+                        <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-border/50">
+                          <div>
+                            <span className="text-muted-foreground block">Pickup</span>
+                            <span className="font-medium">
+                              {new Date(pickupDate).toLocaleDateString()} {format12h(pickupTime)}
+                            </span>
                           </div>
-                        )}
+                          <div>
+                            <span className="text-muted-foreground block">Dropoff</span>
+                            <span className="font-medium">
+                              {new Date(dropoffDate).toLocaleDateString()} {format12h(dropoffTime)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block">Duration</span>
+                            <span className="font-medium">
+                              {Math.round(hours)} hours ({durationMinutes} mins)
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block">KM Limit</span>
+                            <span className="font-medium">{displayKmLimit} km</span>
+                          </div>
+                          {priceInfo && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground block">Pricing Breakdown</span>
+                              <div className="text-sm font-medium space-y-1">
+                                <div>
+                                  {priceInfo.breakdown ||
+                                    `Base: ₹${priceInfo.basePrice?.toFixed(2) || 0}`}
+                                </div>
+                                {priceInfo.gstAmount && priceInfo.gstAmount > 0 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    GST ({priceInfo.gstPercentage || 18}%): +₹
+                                    {priceInfo.gstAmount.toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {priceInfo && (
+                            <div className="col-span-2 pt-2 border-t">
+                              <span className="text-muted-foreground block">Total Amount</span>
+                              <span className="font-bold text-xl text-primary">
+                                ₹{Math.round(priceInfo.total)}
+                              </span>
+                              {priceInfo.hasWeekend && (
+                                <span className="text-xs text-accent block">
+                                  (Weekend surge applied)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setIsBookingConfirmationOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button className="w-full" onClick={handleBookingConfirm}>
+                          Confirm Booking
+                        </Button>
                       </div>
                     </div>
-                    
-                    <div className="flex gap-3">
-                      <Button variant="outline" className="w-full" onClick={() => setIsBookingConfirmationOpen(false)}>Cancel</Button>
-                      <Button className="w-full" onClick={handleBookingConfirm}>Confirm Booking</Button>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
             </DialogContent>
           </Dialog>
-
         </div>
       </main>
 

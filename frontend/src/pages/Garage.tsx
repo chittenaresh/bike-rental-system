@@ -46,19 +46,23 @@ export default function Garage() {
       const approvedTypes = (userDocs || [])
         .filter((doc: any) => doc.status === 'approved')
         .map((doc: any) => doc.type);
-      
-      const allApproved = requiredTypes.every(type => approvedTypes.includes(type));
+
+      const allApproved = requiredTypes.every((type) => approvedTypes.includes(type));
       const hasDocs = userDocs && userDocs.length > 0;
       setDocStatus({ allApproved, hasDocs });
     } catch (error) {
-      console.error("Failed to check documents", error);
+      console.error('Failed to check documents', error);
     }
   };
 
   const handleRent = async (bike: Bike) => {
     const user = getCurrentUser();
     if (!user) {
-      toast({ title: 'Login Required', description: 'Please login to book a ride.', variant: 'destructive' });
+      toast({
+        title: 'Login Required',
+        description: 'Please login to book a ride.',
+        variant: 'destructive',
+      });
       navigate('/auth');
       return;
     }
@@ -70,23 +74,23 @@ export default function Garage() {
       const approvedTypes = (userDocs || [])
         .filter((doc: any) => doc.status === 'approved')
         .map((doc: any) => doc.type);
-      
-      const allVerified = requiredTypes.every(type => approvedTypes.includes(type));
-      
+
+      const allVerified = requiredTypes.every((type) => approvedTypes.includes(type));
+
       if (!allVerified) {
-        toast({ 
-          title: 'Verification Required', 
-          description: 'All documents must be uploaded and verified before booking a ride.', 
-          variant: 'destructive' 
+        toast({
+          title: 'Verification Required',
+          description: 'All documents must be uploaded and verified before booking a ride.',
+          variant: 'destructive',
         });
         navigate('/dashboard?tab=documents');
         return;
       }
     } catch (error: any) {
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to verify documents. Please try again.', 
-        variant: 'destructive' 
+      toast({
+        title: 'Error',
+        description: 'Failed to verify documents. Please try again.',
+        variant: 'destructive',
       });
       return;
     }
@@ -98,27 +102,27 @@ export default function Garage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO 
+      <SEO
         title={`Garage in ${cityName} - Affordable Rental Plans`}
         description={`Check out our competitive bike rental prices and tariffs in the RideFlow Garage in ${cityName}. We offer a wide range of motorcycles, scooters, and electric bikes for rent.`}
         keywords={`garage ${cityName}, bike rental tariffs ${cityName}, motorcycle rental prices ${cityName}, scooter rental cost ${cityName}`}
         schema={{
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          "itemListElement": [
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
             {
-              "@type": "ListItem",
-              "position": 1,
-              "name": "Home",
-              "item": "https://rideflow.com"
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://rideflow.com',
             },
             {
-              "@type": "ListItem",
-              "position": 2,
-              "name": "Garage",
-              "item": "https://rideflow.com/garage"
-            }
-          ]
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Garage',
+              item: 'https://rideflow.com/garage',
+            },
+          ],
         }}
       />
       <Navbar />
@@ -129,8 +133,8 @@ export default function Garage() {
               Garage in {cityName}
             </h1>
             <p className="text-muted-foreground text-sm md:text-base">
-              *All prices are exclusive of taxes and fuel. Images used for representation purposes only, actual color may vary.
-              Prices may vary subject to availability.
+              *All prices are exclusive of taxes and fuel. Images used for representation purposes
+              only, actual color may vary. Prices may vary subject to availability.
             </p>
           </div>
 

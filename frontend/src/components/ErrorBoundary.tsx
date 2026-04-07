@@ -51,7 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertCircle className="h-8 w-8 text-destructive" />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <h1 className="text-2xl font-display font-bold">Something went wrong</h1>
               <p className="text-muted-foreground">
@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Try Again
               </Button>
-              <Button onClick={() => window.location.href = '/'}>
+              <Button onClick={() => (window.location.href = '/')}>
                 <Home className="h-4 w-4 mr-2" />
                 Go Home
               </Button>
@@ -85,6 +85,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-
-

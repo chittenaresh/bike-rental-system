@@ -3,8 +3,22 @@ import { HeroImage } from '@/types';
 import { heroImagesAPI, settingsAPI } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 import { Trash2, Plus, GripVertical, Loader2 } from 'lucide-react';
@@ -59,7 +73,7 @@ export function HeroImageManager() {
     let failCount = 0;
 
     // Start index for order based on existing images
-    let nextOrder = images.length > 0 ? Math.max(...images.map(i => i.order || 0)) + 1 : 0;
+    let nextOrder = images.length > 0 ? Math.max(...images.map((i) => i.order || 0)) + 1 : 0;
 
     try {
       // Process sequentially to maintain order
@@ -67,16 +81,16 @@ export function HeroImageManager() {
         try {
           // 1. Upload image
           const result = await settingsAPI.uploadImage(file);
-          
+
           // 2. Create hero image record
           await heroImagesAPI.create({
             imageUrl: result.imageUrl,
-            title: '', 
+            title: '',
             subtitle: '',
             order: nextOrder++,
-            isActive: true
+            isActive: true,
           });
-          
+
           successCount++;
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
@@ -85,9 +99,9 @@ export function HeroImageManager() {
       }
 
       if (successCount > 0) {
-        toast({ 
+        toast({
           title: 'Upload Complete',
-          description: `Successfully added ${successCount} image${successCount !== 1 ? 's' : ''}.${failCount > 0 ? ` Failed: ${failCount}` : ''}`
+          description: `Successfully added ${successCount} image${successCount !== 1 ? 's' : ''}.${failCount > 0 ? ` Failed: ${failCount}` : ''}`,
         });
         setIsAddOpen(false);
         setSelectedFiles([]);
@@ -175,7 +189,10 @@ export function HeroImageManager() {
               <Button variant="outline" onClick={() => setIsAddOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleUploadAndSave} disabled={uploading || selectedFiles.length === 0}>
+              <Button
+                onClick={handleUploadAndSave}
+                disabled={uploading || selectedFiles.length === 0}
+              >
                 {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Upload & Save
               </Button>
@@ -210,11 +227,7 @@ export function HeroImageManager() {
                   </TableCell>
                   <TableCell>
                     <div className="relative w-24 h-16 rounded overflow-hidden bg-muted">
-                      <img
-                        src={image.imageUrl}
-                        alt="Hero"
-                        className="object-cover w-full h-full"
-                      />
+                      <img src={image.imageUrl} alt="Hero" className="object-cover w-full h-full" />
                     </div>
                   </TableCell>
                   <TableCell>{image.order}</TableCell>

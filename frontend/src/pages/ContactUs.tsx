@@ -1,19 +1,19 @@
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { locationsAPI, supportAPI } from "@/lib/api";
-import { Location } from "@/types";
-import { SEO } from "@/components/SEO";
-import { useToast } from "@/hooks/use-toast";
+import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Mail, Phone, MapPin, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { locationsAPI, supportAPI } from '@/lib/api';
+import { Location } from '@/types';
+import { SEO } from '@/components/SEO';
+import { useToast } from '@/hooks/use-toast';
 
 const DEFAULT_CONTACT = {
   email: '',
   phone: '',
-  address: 'Select a location to see details'
+  address: 'Select a location to see details',
 };
 
 export default function ContactUs() {
@@ -26,7 +26,7 @@ export default function ContactUs() {
     firstName: '',
     lastName: '',
     email: '',
-    message: ''
+    message: '',
   });
 
   useEffect(() => {
@@ -35,9 +35,9 @@ export default function ContactUs() {
         const locations = await locationsAPI.getAll();
         if (!locations || locations.length === 0) return;
 
-        let selectedId = localStorage.getItem('selectedLocation');
+        const selectedId = localStorage.getItem('selectedLocation');
         let location = locations.find((l: Location) => l.id === selectedId);
-        
+
         // Fallback to first location if none selected or found
         if (!location && locations.length > 0) {
           location = locations[0];
@@ -47,62 +47,82 @@ export default function ContactUs() {
           setSelectedLocationId(location.id);
           const displayLocation = location.city || location.name;
           setLocationName(displayLocation);
-          
+
           const emailPrefix = displayLocation.toLowerCase().replace(/\s+/g, '');
           const email = `${emailPrefix}@bikerental.com`;
           const address = displayLocation;
-          
+
           setContactInfo({
             email,
             phone: '+91 98765 43210',
-            address
+            address,
           });
         }
       } catch (error) {
         console.error('Failed to load location info', error);
       }
     };
-    
+
     loadContactInfo();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Email validation regex
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    
+
     if (!formData.firstName.trim()) {
-      toast({ title: "Validation Error", description: "First name is required.", variant: "destructive" });
+      toast({
+        title: 'Validation Error',
+        description: 'First name is required.',
+        variant: 'destructive',
+      });
       return;
     }
-    
+
     if (!formData.email.trim()) {
-      toast({ title: "Validation Error", description: "Email is required.", variant: "destructive" });
+      toast({
+        title: 'Validation Error',
+        description: 'Email is required.',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (!emailRegex.test(formData.email)) {
       toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address (e.g., example@gmail.com).",
-        variant: "destructive",
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address (e.g., example@gmail.com).',
+        variant: 'destructive',
       });
       return;
     }
 
     if (formData.email.length > 100) {
-      toast({ title: "Validation Error", description: "Email cannot exceed 100 characters.", variant: "destructive" });
+      toast({
+        title: 'Validation Error',
+        description: 'Email cannot exceed 100 characters.',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (!formData.message.trim()) {
-      toast({ title: "Validation Error", description: "Message is required.", variant: "destructive" });
+      toast({
+        title: 'Validation Error',
+        description: 'Message is required.',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (formData.message.length > 500) {
-      toast({ title: "Validation Error", description: "Message cannot exceed 500 characters.", variant: "destructive" });
+      toast({
+        title: 'Validation Error',
+        description: 'Message cannot exceed 500 characters.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -114,13 +134,13 @@ export default function ContactUs() {
         description: formData.message,
         locationId: selectedLocationId,
         guestName: `${formData.firstName} ${formData.lastName}`.trim(),
-        guestEmail: formData.email
+        guestEmail: formData.email,
       });
 
       const ticketIdStr = ticket._id.toString().slice(-8).toUpperCase();
 
       toast({
-        title: "Message Sent",
+        title: 'Message Sent',
         description: `Your request (Ticket ID: #${ticketIdStr}) has been received. Our team will contact you via email.`,
       });
 
@@ -128,13 +148,13 @@ export default function ContactUs() {
         firstName: '',
         lastName: '',
         email: '',
-        message: ''
+        message: '',
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to send message. Please try again later.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to send message. Please try again later.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -143,49 +163,49 @@ export default function ContactUs() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEO 
+      <SEO
         title={`Contact Us - ${locationName || '24/7 Support'} & Location Details`}
         description={`Get in touch with RideFlow ${locationName ? `in ${locationName}` : ''} for any queries, support, or feedback regarding our bike rental services.`}
         keywords={`contact RideFlow ${locationName || ''}, bike rental support, customer service`}
         schema={[
           {
-            "@context": "https://schema.org",
-            "@type": "ContactPage",
-            "name": `Contact RideFlow ${locationName || ''}`,
-            "description": `Customer support and contact information for RideFlow Bike Rentals ${locationName ? `in ${locationName}` : ''}.`,
-            "mainEntity": {
-              "@type": "Organization",
-              "name": "RideFlow",
-              "telephone": contactInfo.phone,
-              "email": contactInfo.email,
-              "address": {
-                "@type": "PostalAddress",
-                "streetAddress": locationName || "Our Office",
-                "addressLocality": locationName || "India",
-                "addressRegion": "Telangana",
-                "postalCode": "500001",
-                "addressCountry": "IN"
-              }
-            }
+            '@context': 'https://schema.org',
+            '@type': 'ContactPage',
+            name: `Contact RideFlow ${locationName || ''}`,
+            description: `Customer support and contact information for RideFlow Bike Rentals ${locationName ? `in ${locationName}` : ''}.`,
+            mainEntity: {
+              '@type': 'Organization',
+              name: 'RideFlow',
+              telephone: contactInfo.phone,
+              email: contactInfo.email,
+              address: {
+                '@type': 'PostalAddress',
+                streetAddress: locationName || 'Our Office',
+                addressLocality: locationName || 'India',
+                addressRegion: 'Telangana',
+                postalCode: '500001',
+                addressCountry: 'IN',
+              },
+            },
           },
           {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            "itemListElement": [
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
               {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Home",
-                "item": "https://rideflow.com"
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: 'https://rideflow.com',
               },
               {
-                "@type": "ListItem",
-                "position": 2,
-                "name": "Contact Us",
-                "item": "https://rideflow.com/contact"
-              }
-            ]
-          }
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Contact Us',
+                item: 'https://rideflow.com/contact',
+              },
+            ],
+          },
         ]}
       />
       <Navbar />
@@ -242,13 +262,13 @@ export default function ContactUs() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">First Name</label>
-                    <Input 
-                      placeholder="John" 
+                    <Input
+                      placeholder="John"
                       value={formData.firstName}
                       onChange={(e) => {
                         const value = e.target.value;
                         if (/^[a-zA-Z]*$/.test(value)) {
-                          setFormData(prev => ({ ...prev, firstName: value.slice(0, 20) }));
+                          setFormData((prev) => ({ ...prev, firstName: value.slice(0, 20) }));
                         }
                       }}
                       maxLength={20}
@@ -257,13 +277,13 @@ export default function ContactUs() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Last Name</label>
-                    <Input 
-                      placeholder="Doe" 
+                    <Input
+                      placeholder="Doe"
                       value={formData.lastName}
                       onChange={(e) => {
                         const value = e.target.value;
                         if (/^[a-zA-Z]*$/.test(value)) {
-                          setFormData(prev => ({ ...prev, lastName: value.slice(0, 20) }));
+                          setFormData((prev) => ({ ...prev, lastName: value.slice(0, 20) }));
                         }
                       }}
                       maxLength={20}
@@ -273,11 +293,11 @@ export default function ContactUs() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Email</label>
-                  <Input 
-                    type="email" 
-                    placeholder="john@example.com" 
+                  <Input
+                    type="email"
+                    placeholder="john@example.com"
                     value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                     disabled={loading}
                     maxLength={100}
                     required
@@ -286,15 +306,17 @@ export default function ContactUs() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="text-sm font-medium">Message</label>
-                    <span className={`text-[10px] ${formData.message.length > 500 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    <span
+                      className={`text-[10px] ${formData.message.length > 500 ? 'text-destructive' : 'text-muted-foreground'}`}
+                    >
                       {formData.message.length}/500
                     </span>
                   </div>
-                  <Textarea 
-                    placeholder="How can we help you?" 
-                    className="min-h-[120px]" 
+                  <Textarea
+                    placeholder="How can we help you?"
+                    className="min-h-[120px]"
                     value={formData.message}
-                    onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
                     disabled={loading}
                     maxLength={500}
                     required

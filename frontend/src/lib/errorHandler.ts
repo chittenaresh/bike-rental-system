@@ -50,12 +50,12 @@ export function handleApiError(error: unknown): ApiError {
     // Try to parse error message for status codes if it's a generic error
     const statusMatch = error.message.match(/status (?:of )?(\d+)/i);
     const status = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
-    
+
     const apiError: ApiError = new AppApiError(error.message, status);
-    
+
     return apiError;
   }
-  
+
   return new AppApiError(String(error));
 }
 
@@ -109,6 +109,3 @@ export async function safeAsync<T>(
     return fallback;
   }
 }
-
-
-

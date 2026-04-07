@@ -13,8 +13,8 @@ interface HeroCarouselProps {
 }
 
 export function HeroCarousel({ images }: HeroCarouselProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ 
-    loop: images.length > 1 
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: images.length > 1,
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -27,7 +27,7 @@ export function HeroCarousel({ images }: HeroCarouselProps) {
     if (!emblaApi) return;
     onSelect();
     emblaApi.on('select', onSelect);
-    
+
     // Auto-play only if multiple images
     let intervalId: NodeJS.Timeout;
     if (images.length > 1) {
@@ -50,16 +50,16 @@ export function HeroCarousel({ images }: HeroCarouselProps) {
         <div className="flex h-full w-full">
           {images.map((image, index) => (
             <div key={image.id} className="relative flex-[0_0_100%] h-full w-full min-w-0">
-               {/* Background Image */}
-               <img 
-                 src={image.imageUrl}
-                 alt="Premium Bike Rental Service - RideFlow"
-                 loading={index === 0 ? "eager" : "lazy"}
-                 fetchPriority={index === 0 ? "high" : "low"}
-                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500"
-               />
-               {/* Overlay - lighter opacity to show images better */}
-               <div className="absolute inset-0 bg-background/40 backdrop-blur-[0px]" />
+              {/* Background Image */}
+              <img
+                src={image.imageUrl}
+                alt="Premium Bike Rental Service - RideFlow"
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchPriority={index === 0 ? 'high' : 'low'}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500"
+              />
+              {/* Overlay - lighter opacity to show images better */}
+              <div className="absolute inset-0 bg-background/40 backdrop-blur-[0px]" />
             </div>
           ))}
         </div>

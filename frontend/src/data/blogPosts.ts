@@ -13,10 +13,11 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
-    id: "1",
-    slug: "top-5-tips-for-bike-rentals",
-    title: "Top 5 Tips for a Smooth Bike Rental Experience",
-    excerpt: "Renting a bike can be a breeze if you know what to look for. Here are our top 5 tips to ensure you have the best experience.",
+    id: '1',
+    slug: 'top-5-tips-for-bike-rentals',
+    title: 'Top 5 Tips for a Smooth Bike Rental Experience',
+    excerpt:
+      'Renting a bike can be a breeze if you know what to look for. Here are our top 5 tips to ensure you have the best experience.',
     content: `
       <p>Renting a bike is one of the most convenient ways to explore a new city or commute without the hassle of ownership. However, for first-timers, it can feel a bit overwhelming. Here are our top tips to make your next rental seamless.</p>
       
@@ -35,17 +36,18 @@ export const blogPosts: BlogPost[] = [
       <h3>5. Plan Your Route</h3>
       <p>While exploring is fun, having a rough idea of your destination and parking spots can save you a lot of time and battery/fuel.</p>
     `,
-    author: "RideFlow Team",
-    date: "2026-02-10",
-    image: "/blog/rental-tips.jpg",
-    category: "Guides",
-    keywords: "bike rental tips, rent a bike guide, motorcycle rental safety, RideFlow guides"
+    author: 'RideFlow Team',
+    date: '2026-02-10',
+    image: '/blog/rental-tips.jpg',
+    category: 'Guides',
+    keywords: 'bike rental tips, rent a bike guide, motorcycle rental safety, RideFlow guides',
   },
   {
-    id: "2",
-    slug: "benefits-of-electric-bikes",
-    title: "Why Electric Bikes are the Future of Urban Commuting",
-    excerpt: "Discover how electric bikes are changing the way we move through cities, from reducing carbon footprints to saving on fuel costs.",
+    id: '2',
+    slug: 'benefits-of-electric-bikes',
+    title: 'Why Electric Bikes are the Future of Urban Commuting',
+    excerpt:
+      'Discover how electric bikes are changing the way we move through cities, from reducing carbon footprints to saving on fuel costs.',
     content: `
       <p>Urban mobility is undergoing a massive transformation, and electric bikes (E-bikes) are leading the charge. Here's why you should consider an E-bike for your next city ride.</p>
       
@@ -63,17 +65,19 @@ export const blogPosts: BlogPost[] = [
       
       <p>At RideFlow, we're expanding our fleet of electric bikes to provide you with the most modern and sustainable rental options available.</p>
     `,
-    author: "RideFlow Team",
-    date: "2026-02-05",
-    image: "/blog/electric-bikes.jpg",
-    category: "Innovation",
-    keywords: "electric bike benefits, e-bike commuting, sustainable transport, electric scooter rental"
+    author: 'RideFlow Team',
+    date: '2026-02-05',
+    image: '/blog/electric-bikes.jpg',
+    category: 'Innovation',
+    keywords:
+      'electric bike benefits, e-bike commuting, sustainable transport, electric scooter rental',
   },
   {
-    id: "3",
-    slug: "exploring-bangalore-on-two-wheels",
-    title: "Exploring Bangalore: The Best Routes for a Weekend Ride",
-    excerpt: "From the lush greenery of Cubbon Park to the outskirts of Nandi Hills, discover the best places to ride your rented bike in Bangalore.",
+    id: '3',
+    slug: 'exploring-bangalore-on-two-wheels',
+    title: 'Exploring Bangalore: The Best Routes for a Weekend Ride',
+    excerpt:
+      'From the lush greenery of Cubbon Park to the outskirts of Nandi Hills, discover the best places to ride your rented bike in Bangalore.',
     content: `
       <p>Bangalore, the Garden City, is best explored on two wheels. Whether you're a local or a visitor, renting a bike gives you the freedom to discover hidden gems. Here are our favorite weekend routes.</p>
       
@@ -88,10 +92,11 @@ export const blogPosts: BlogPost[] = [
       
       <p>Ready for your adventure? Rent a high-performance motorcycle from RideFlow and hit the road this weekend!</p>
     `,
-    author: "Local Explorer",
-    date: "2026-01-28",
-    image: "/blog/bangalore-ride.jpg",
-    category: "Travel",
-    keywords: "Bangalore bike routes, weekend rides Bangalore, Nandi Hills bike trip, Bangalore travel guide"
-  }
+    author: 'Local Explorer',
+    date: '2026-01-28',
+    image: '/blog/bangalore-ride.jpg',
+    category: 'Travel',
+    keywords:
+      'Bangalore bike routes, weekend rides Bangalore, Nandi Hills bike trip, Bangalore travel guide',
+  },
 ];

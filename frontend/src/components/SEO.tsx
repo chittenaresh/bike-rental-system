@@ -22,8 +22,10 @@ export function SEO({
   noindex = false,
 }: SEOProps) {
   const fullTitle = `${title} | RideFlow - Premium Bike Rentals`;
-  const currentUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
-  const absoluteOgImage = typeof window !== 'undefined' ? window.location.origin + ogImage : ogImage;
+  const currentUrl =
+    typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
+  const absoluteOgImage =
+    typeof window !== 'undefined' ? window.location.origin + ogImage : ogImage;
 
   return (
     <Helmet>
@@ -31,7 +33,7 @@ export function SEO({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
-      <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
+      <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
       <link rel="canonical" href={canonical || currentUrl} />
 
       {/* Open Graph Tags */}
@@ -49,11 +51,7 @@ export function SEO({
       <meta name="twitter:image" content={absoluteOgImage} />
 
       {/* Structured Data */}
-      {schema && (
-        <script type="application/ld+json">
-          {JSON.stringify(schema)}
-        </script>
-      )}
+      {schema && <script type="application/ld+json">{JSON.stringify(schema)}</script>}
     </Helmet>
   );
 }

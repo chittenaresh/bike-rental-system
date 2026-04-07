@@ -43,9 +43,21 @@ export const Footer = memo(function Footer() {
           <div>
             <h4 className="font-display font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/ride-finder" className="hover:text-primary transition-colors">Ride Finder</Link></li>
-              <li><Link to="/garage" className="hover:text-primary transition-colors">Garage</Link></li>
-              <li><Link to="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
+              <li>
+                <Link to="/ride-finder" className="hover:text-primary transition-colors">
+                  Ride Finder
+                </Link>
+              </li>
+              <li>
+                <Link to="/garage" className="hover:text-primary transition-colors">
+                  Garage
+                </Link>
+              </li>
+              <li>
+                <Link to="/faq" className="hover:text-primary transition-colors">
+                  FAQ
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -53,10 +65,26 @@ export const Footer = memo(function Footer() {
           <div>
             <h4 className="font-display font-semibold mb-4">Company</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-              <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
-              <li><Link to="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
-              <li><Link to="/support" className="hover:text-primary transition-colors">Customer Support</Link></li>
+              <li>
+                <Link to="/about" className="hover:text-primary transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-primary transition-colors">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-primary transition-colors">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/support" className="hover:text-primary transition-colors">
+                  Customer Support
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -67,7 +95,9 @@ export const Footer = memo(function Footer() {
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-primary" />
-                  {locationName ? `${locationName.toLowerCase().replace(/\s+/g, '')}@bikerental.com` : 'info@bikerental.com'}
+                  {locationName
+                    ? `${locationName.toLowerCase().replace(/\s+/g, '')}@bikerental.com`
+                    : 'info@bikerental.com'}
                 </li>
                 <li className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-primary" />

@@ -14,7 +14,7 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Forgot Password States
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -39,33 +39,34 @@ export default function Auth() {
     const hasNumber = /[0-9]/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
-    if (password.length < minLength) return "Password must be at least 8 characters long";
-    if (!hasUpperCase) return "Password must contain at least one uppercase letter";
-    if (!hasLowerCase) return "Password must contain at least one lowercase letter";
-    if (!hasNumber) return "Password must contain at least one number";
-    if (!hasSpecialChar) return "Password must contain at least one special character";
+    if (password.length < minLength) return 'Password must be at least 8 characters long';
+    if (!hasUpperCase) return 'Password must contain at least one uppercase letter';
+    if (!hasLowerCase) return 'Password must contain at least one lowercase letter';
+    if (!hasNumber) return 'Password must contain at least one number';
+    if (!hasSpecialChar) return 'Password must contain at least one special character';
     return null;
   };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) return "Email is required";
-    if (email.length > 100) return "Email is too long (max 100 characters)";
-    if (!emailRegex.test(email)) return "Please enter a valid email address (e.g., user@example.com)";
+    if (!email) return 'Email is required';
+    if (email.length > 100) return 'Email is too long (max 100 characters)';
+    if (!emailRegex.test(email))
+      return 'Please enter a valid email address (e.g., user@example.com)';
     return null;
   };
 
   const validateName = (name: string) => {
-    if (!name) return "Full name is required";
-    if (name.length < 2) return "Name is too short";
-    if (name.length > 50) return "Name is too long (max 50 characters)";
-    if (!/^[a-zA-Z\s]*$/.test(name)) return "Name should only contain alphabets and spaces";
+    if (!name) return 'Full name is required';
+    if (name.length < 2) return 'Name is too short';
+    if (name.length > 50) return 'Name is too long (max 50 characters)';
+    if (!/^[a-zA-Z\s]*$/.test(name)) return 'Name should only contain alphabets and spaces';
     return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Forgot Password Flow
     if (isForgotPassword) {
       setIsLoading(true);
@@ -73,43 +74,51 @@ export default function Auth() {
         if (isResetting) {
           // Reset Password
           if (!otp || !formData.password || !formData.confirmPassword) {
-            toast({ title: "Error", description: "Please enter OTP, new password, and confirm password", variant: "destructive" });
+            toast({
+              title: 'Error',
+              description: 'Please enter OTP, new password, and confirm password',
+              variant: 'destructive',
+            });
             return;
           }
 
           const passwordError = validatePassword(formData.password);
           if (passwordError) {
-            toast({ title: "Weak Password", description: passwordError, variant: "destructive" });
+            toast({ title: 'Weak Password', description: passwordError, variant: 'destructive' });
             return;
           }
 
           if (formData.password !== formData.confirmPassword) {
-            toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
+            toast({
+              title: 'Error',
+              description: 'Passwords do not match',
+              variant: 'destructive',
+            });
             return;
           }
           await authAPI.resetPassword(formData.email, otp, formData.password);
-          toast({ title: "Success", description: "Password reset successfully! Please login." });
+          toast({ title: 'Success', description: 'Password reset successfully! Please login.' });
           setIsForgotPassword(false);
           setIsResetting(false);
           setOtp('');
-          setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+          setFormData((prev) => ({ ...prev, password: '', confirmPassword: '' }));
         } else {
           // Request Reset
           const emailError = validateEmail(formData.email);
           if (emailError) {
-            toast({ title: "Error", description: emailError, variant: "destructive" });
+            toast({ title: 'Error', description: emailError, variant: 'destructive' });
             return;
           }
           const res = await authAPI.forgotPassword(formData.email);
-          toast({ title: "Success", description: res.message });
-          setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+          toast({ title: 'Success', description: res.message });
+          setFormData((prev) => ({ ...prev, password: '', confirmPassword: '' }));
           setIsResetting(true);
         }
       } catch (error: any) {
         toast({
-          title: "Error",
-          description: error.message || "An error occurred",
-          variant: "destructive",
+          title: 'Error',
+          description: error.message || 'An error occurred',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -123,7 +132,7 @@ export default function Auth() {
     // Email Validation
     const emailError = validateEmail(formData.email);
     if (emailError) {
-      errors.push("invalid mail address");
+      errors.push('invalid email');
     }
 
     // Name Validation - Only for Signup
@@ -140,18 +149,19 @@ export default function Auth() {
       if (passwordError) {
         errors.push(passwordError);
       }
-    } else if (!formData.password) { // For login, check if password is empty
-      errors.push("invalid password");
+    } else if (!formData.password) {
+      // For login, check if password is empty
+      errors.push('invalid password');
     }
 
     if (errors.length > 0) {
-      let finalMessage = "";
-      if (isLogin && errors.includes("invalid mail address") && errors.includes("invalid password")) {
-        finalMessage = "invalid email and password";
+      let finalMessage = '';
+      if (isLogin && errors.includes('invalid email') && errors.includes('invalid password')) {
+        finalMessage = 'invalid email and password';
       } else {
-        finalMessage = errors.join(", ");
+        finalMessage = errors.join(', ');
       }
-      toast({ title: "Error", description: finalMessage, variant: "destructive" });
+      toast({ title: 'Error', description: finalMessage, variant: 'destructive' });
       return;
     }
 
@@ -162,8 +172,8 @@ export default function Auth() {
         if (data?.token) setAuthToken(data.token);
         if (data?.user) localStorage.setItem('currentUser', JSON.stringify(data.user));
         toast({
-          title: "Success",
-          description: "Logged in successfully!",
+          title: 'Success',
+          description: 'Logged in successfully!',
         });
         // Redirect based on role
         if (data.user?.role === 'superadmin') {
@@ -174,12 +184,16 @@ export default function Auth() {
           navigate('/dashboard');
         }
       } else {
-        const data = await authAPI.register({ email: formData.email, password: formData.password, name: formData.name });
+        const data = await authAPI.register({
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+        });
         if (data?.token) setAuthToken(data.token);
         if (data?.user) localStorage.setItem('currentUser', JSON.stringify(data.user));
         toast({
-          title: "Success",
-          description: "Account created successfully! Welcome bonus of ₹500 added to your wallet.",
+          title: 'Success',
+          description: 'Account created successfully! Welcome bonus of ₹500 added to your wallet.',
         });
         // Redirect based on role
         if (data.user?.role === 'superadmin') {
@@ -192,9 +206,9 @@ export default function Auth() {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "An error occurred. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'An error occurred. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -210,16 +224,26 @@ export default function Auth() {
 
   const getSubHeaderText = () => {
     if (isForgotPassword) {
-      return isResetting ? 'Enter the OTP and your new password' : 'Enter your email to receive an OTP';
+      return isResetting
+        ? 'Enter the OTP and your new password'
+        : 'Enter your email to receive an OTP';
     }
-    return isLogin ? 'Enter your credentials to access your account' : 'Sign up to start renting bikes today';
+    return isLogin
+      ? 'Enter your credentials to access your account'
+      : 'Sign up to start renting bikes today';
   };
 
   return (
     <div className="min-h-screen overflow-y-auto bg-background">
-      <SEO 
-        title={isForgotPassword ? "Reset Password" : (isLogin ? "Login" : "Sign Up")}
-        description={isForgotPassword ? "Reset your RideFlow account password." : (isLogin ? "Log in to your RideFlow account." : "Create a new RideFlow account.")}
+      <SEO
+        title={isForgotPassword ? 'Reset Password' : isLogin ? 'Login' : 'Sign Up'}
+        description={
+          isForgotPassword
+            ? 'Reset your RideFlow account password.'
+            : isLogin
+              ? 'Log in to your RideFlow account.'
+              : 'Create a new RideFlow account.'
+        }
         keywords="bike rental login, create account, RideFlow sign up, rental dashboard access"
         noindex={true}
       />
@@ -238,12 +262,8 @@ export default function Auth() {
 
             {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-display font-bold mb-2">
-                {getHeaderText()}
-              </h1>
-              <p className="text-muted-foreground">
-                {getSubHeaderText()}
-              </p>
+              <h1 className="text-2xl font-display font-bold mb-2">{getHeaderText()}</h1>
+              <p className="text-muted-foreground">{getSubHeaderText()}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -299,7 +319,11 @@ export default function Auth() {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -313,7 +337,9 @@ export default function Auth() {
                         placeholder="••••••••"
                         className="hide-password-toggle pr-10"
                         value={formData.confirmPassword}
-                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, confirmPassword: e.target.value })
+                        }
                         required
                         autoComplete="new-password"
                       />
@@ -322,7 +348,11 @@ export default function Auth() {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -330,21 +360,18 @@ export default function Auth() {
               )}
 
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading 
-                  ? 'Please wait...' 
-                  : isResetting ? 'Reset Password' : 'Send OTP'
-                }
+                {isLoading ? 'Please wait...' : isResetting ? 'Reset Password' : 'Send OTP'}
               </Button>
-              
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="w-full mt-2" 
+
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full mt-2"
                 onClick={() => {
                   setIsForgotPassword(false);
                   setIsResetting(false);
                   setOtp('');
-                  setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+                  setFormData((prev) => ({ ...prev, password: '', confirmPassword: '' }));
                 }}
               >
                 Back to Login
@@ -358,141 +385,138 @@ export default function Auth() {
           <main className="flex flex-col min-h-full">
             <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 lg:p-16 py-12 md:py-20">
               <div className="w-full max-w-sm space-y-8 animate-fade-in">
-              {/* Back Link */}
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to home
-              </Link>
+                {/* Back Link */}
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to home
+                </Link>
 
-              {/* Logo */}
-              <div className="flex items-center gap-2 mb-8">
-                <div className="p-2 rounded-xl gradient-hero">
-                  <Bike className="h-6 w-6 text-primary-foreground" />
+                {/* Logo */}
+                <div className="flex items-center gap-2 mb-8">
+                  <div className="p-2 rounded-xl gradient-hero">
+                    <Bike className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                  <span className="font-display font-bold text-xl">RideFlow</span>
                 </div>
-                <span className="font-display font-bold text-xl">RideFlow</span>
-              </div>
 
-              {/* Header */}
-              <div className="mb-8">
-                <h1 className="text-2xl font-display font-bold mb-2">
-                  {getHeaderText()}
-                </h1>
-                <p className="text-muted-foreground">
-                  {getSubHeaderText()}
-                </p>
-              </div>
+                {/* Header */}
+                <div className="mb-8">
+                  <h1 className="text-2xl font-display font-bold mb-2">{getHeaderText()}</h1>
+                  <p className="text-muted-foreground">{getSubHeaderText()}</p>
+                </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Name Field - Only for Signup */}
-                {!isLogin && (
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Name Field - Only for Signup */}
+                  {!isLogin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="John Doe"
+                        value={formData.name}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^[a-zA-Z\s]*$/.test(value)) {
+                            setFormData({ ...formData, name: value.slice(0, 50) });
+                          }
+                        }}
+                        maxLength={50}
+                      />
+                    </div>
+                  )}
+
+                  {/* Email Field - Login/Signup */}
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={formData.name}
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={formData.email}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^[a-zA-Z\s]*$/.test(value)) {
-                          setFormData({ ...formData, name: value.slice(0, 50) });
+                        const value = e.target.value.toLowerCase().trim();
+                        if (value.length <= 100) {
+                          setFormData({ ...formData, email: value });
                         }
                       }}
-                      maxLength={50}
-                    />
-                  </div>
-                )}
-
-                {/* Email Field - Login/Signup */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={formData.email}
-                    onChange={(e) => {
-                      const value = e.target.value.toLowerCase().trim();
-                      if (value.length <= 100) {
-                        setFormData({ ...formData, email: value });
-                      }
-                    }}
-                    maxLength={100}
-                    required
-                  />
-                </div>
-
-                {/* Password Field - Login, Signup */}
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      className="hide-password-toggle pr-10"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      maxLength={100}
                       required
                     />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
                   </div>
-                </div>
 
-                {/* Forgot Password Link - Only on Login */}
-                {isLogin && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      className="text-sm text-primary hover:underline"
-                      onClick={() => {
-                        if (!formData.email) {
-                          toast({
-                            title: "Error",
-                            description: "Please enter your email address first.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        setIsForgotPassword(true);
-                      }}
-                    >
-                      Forgot password?
-                    </button>
+                  {/* Password Field - Login, Signup */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className="hide-password-toggle pr-10"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                )}
 
-                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading 
-                    ? 'Please wait...' 
-                    : (isLogin ? 'Sign In' : 'Create Account')
-                  }
-                </Button>
-              </form>
+                  {/* Forgot Password Link - Only on Login */}
+                  {isLogin && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        className="text-sm text-primary hover:underline"
+                        onClick={() => {
+                          if (!formData.email) {
+                            toast({
+                              title: 'Error',
+                              description: 'Please enter your email address first.',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+                          setIsForgotPassword(true);
+                        }}
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
 
-              {/* Toggle Login/Signup */}
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-                <button
-                  type="button"
-                  className="text-primary font-medium hover:underline"
-                  onClick={() => setIsLogin(!isLogin)}
-                >
-                  {isLogin ? 'Sign up' : 'Sign in'}
-                </button>
-              </p>
+                  <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                    {isLoading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
+                  </Button>
+                </form>
+
+                {/* Toggle Login/Signup */}
+                <p className="mt-6 text-center text-sm text-muted-foreground">
+                  {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+                  <button
+                    type="button"
+                    className="text-primary font-medium hover:underline"
+                    onClick={() => setIsLogin(!isLogin)}
+                  >
+                    {isLogin ? 'Sign up' : 'Sign in'}
+                  </button>
+                </p>
+              </div>
             </div>
-          </div>
           </main>
 
           {/* Right side: Image/Content */}
@@ -505,8 +529,8 @@ export default function Auth() {
                 Start Your Journey
               </h2>
               <p className="text-muted-foreground">
-                Join thousands of riders exploring their cities with RideFlow.
-                Premium bikes, flexible rentals, unforgettable adventures.
+                Join thousands of riders exploring their cities with RideFlow. Premium bikes,
+                flexible rentals, unforgettable adventures.
               </p>
 
               {/* Feature List */}
