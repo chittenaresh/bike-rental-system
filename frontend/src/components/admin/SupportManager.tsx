@@ -19,11 +19,11 @@ import {
 } from '@/components/ui/select';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetClose,
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -60,6 +60,7 @@ interface Ticket {
   guestEmail?: string;
   contactName?: string;
   contactEmail?: string;
+  contactPhone?: string;
   rentalId?: any;
   messages: Message[];
 }
@@ -458,32 +459,29 @@ function AdminTicketDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[600px] flex flex-col p-0 border-l">
-        <SheetHeader className="p-6 border-b bg-muted/10">
+      <SheetContent className="w-full sm:max-w-[750px] flex flex-col p-0 border-l shadow-2xl">
+        <SheetHeader className="p-6 border-b bg-muted/10 shrink-0">
           <div className="space-y-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <SheetTitle className="text-xl">{currentTicket.subject}</SheetTitle>
-                <SheetDescription>
-                  Ticket #{currentTicket._id.substring(currentTicket._id.length - 8)}
-                </SheetDescription>
-              </div>
-              <SheetClose asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <X className="h-4 w-4" />
-                </Button>
-              </SheetClose>
+            <div className="flex flex-col gap-1">
+              <SheetTitle className="text-xl sm:text-2xl font-bold truncate pr-10">
+                {currentTicket.subject}
+              </SheetTitle>
+              <SheetDescription className="font-mono text-xs">
+                Ticket #{currentTicket._id.substring(currentTicket._id.length - 8)}
+              </SheetDescription>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Status</label>
+                <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                  Status
+                </label>
                 <Select
                   value={currentTicket.status}
                   onValueChange={handleStatusChange}
                   disabled={updatingStatus}
                 >
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger className="h-9 bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -496,13 +494,15 @@ function AdminTicketDetailSheet({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Priority</label>
+                <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                  Priority
+                </label>
                 <Select
                   value={currentTicket.priority}
                   onValueChange={handlePriorityChange}
                   disabled={updatingStatus}
                 >
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger className="h-9 bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -515,38 +515,72 @@ function AdminTicketDetailSheet({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground pt-2 border-t">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-primary" />
-                  <span className="font-medium text-foreground">
-                    {currentTicket.contactName ||
+            <div className="flex flex-col gap-3 pt-4 border-t">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                <div className="flex items-center gap-2 group cursor-help">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                    {(currentTicket.contactName ||
                       currentTicket.guestName ||
                       currentTicket.userId?.name ||
-                      'Guest'}
-                  </span>
+                      'G')[0].toUpperCase()}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-foreground leading-none mb-1">
+                      {currentTicket.contactName ||
+                        currentTicket.guestName ||
+                        currentTicket.userId?.name ||
+                        'Guest'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                      Customer Name
+                    </span>
+                  </div>
                 </div>
-                <div>•</div>
-                <div className="flex items-center gap-1.5">
-                  <Mail className="h-3 w-3" />
-                  <span>
-                    {currentTicket.contactEmail ||
-                      currentTicket.guestEmail ||
-                      currentTicket.userId?.email}
-                  </span>
+
+                <div className="flex items-center gap-2 group min-w-0 max-w-full overflow-hidden">
+                  <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-foreground font-medium break-all leading-none mb-1">
+                      {currentTicket.contactEmail ||
+                        currentTicket.guestEmail ||
+                        currentTicket.userId?.email}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                      Email Address
+                    </span>
+                  </div>
                 </div>
-                {currentTicket.userId?.mobile && (
-                  <>
-                    <div>•</div>
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="h-3 w-3" />
-                      <span>{currentTicket.userId.mobile}</span>
+
+                {(currentTicket.userId?.mobile || currentTicket.contactPhone) && (
+                  <div className="flex items-center gap-2 group">
+                    <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-600 shrink-0">
+                      <Phone className="h-4 w-4" />
                     </div>
-                  </>
+                    <div className="flex flex-col">
+                      <span className="text-foreground font-medium leading-none mb-1">
+                        {currentTicket.contactPhone || currentTicket.userId?.mobile}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                        Phone Number
+                      </span>
+                    </div>
+                  </div>
                 )}
-                <div>•</div>
-                <div className="capitalize font-medium text-primary/80">
-                  {currentTicket.category}
+
+                <div className="flex items-center gap-2 group">
+                  <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600 shrink-0">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-foreground font-medium capitalize leading-none mb-1">
+                      {currentTicket.category}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                      Category
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -554,10 +588,11 @@ function AdminTicketDetailSheet({
                 (currentTicket.contactEmail || currentTicket.guestEmail) &&
                 (currentTicket.contactEmail || currentTicket.guestEmail) !==
                   currentTicket.userId.email && (
-                  <div className="flex items-center gap-2 px-2 py-1 bg-orange-50 text-orange-700 rounded text-[10px] w-fit border border-orange-100">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span>
-                      Account Email: {currentTicket.userId.email} (Different from contact email)
+                  <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-[11px] w-full border border-orange-100 shadow-sm animate-in fade-in slide-in-from-top-1">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="leading-tight">
+                      <strong className="font-bold">Security Notice:</strong> Account email (
+                      {currentTicket.userId.email}) differs from ticket contact email.
                     </span>
                   </div>
                 )}

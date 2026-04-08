@@ -130,7 +130,14 @@ export const Navbar = memo(function Navbar() {
     // Only check profile if we don't have a valid location from localStorage
     if (!nextLocationId && getCurrentUser()) {
       const profile = await safeAsync(() => authAPI.getCurrentUser(), null, 'loadUser');
-      const userLocId = profile?.currentLocationId ? String(profile.currentLocationId) : '';
+      
+      // For admin users, prioritize their assigned location
+      const assignedLocId = profile?.role === 'admin' && profile?.locationId 
+        ? (typeof profile.locationId === 'object' ? (profile.locationId.id || profile.locationId._id) : profile.locationId)
+        : null;
+
+      const userLocId = assignedLocId || (profile?.currentLocationId ? String(profile.currentLocationId) : '');
+      
       if (userLocId && ids.has(userLocId)) {
         nextLocationId = userLocId;
         localStorage.setItem('selectedLocation', userLocId);
@@ -151,15 +158,21 @@ export const Navbar = memo(function Navbar() {
     // Sync user state with localStorage/auth status when route changes
     const currentUser = getCurrentUser();
     if (JSON.stringify(currentUser) !== JSON.stringify(user)) {
-      setUser(currentUser);
+      setTimeout(() => {
+        setUser(currentUser);
+      }, 0);
     }
 
-    // Load locations
-    loadLocations();
+    // Load locations asynchronously to avoid synchronous state updates within effect
+    setTimeout(() => {
+      loadLocations();
+    }, 0);
 
     // Load active ride if user is logged in
     if (currentUser && !['admin', 'superadmin'].includes(currentUser.role)) {
-      loadActiveRide(currentUser);
+      setTimeout(() => {
+        loadActiveRide(currentUser);
+      }, 0);
 
       // Refresh active ride status every 30 seconds
       const interval = setInterval(() => {

@@ -1,7 +1,8 @@
 import express from 'express';
 import Bike from '../models/Bike.js';
-import { authenticateToken, authorize } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, authorize } from '../middleware/auth.js';
 import User from '../models/User.js';
+import { validateBrandModelMatch, getBrandForModel } from '../utils/bikeSpecs.js';
 import { transformBike } from '../utils/transform.js';
 import Rental from '../models/Rental.js';
 import { logErrorIfNotConnection } from '../utils/errorHandler.js';
@@ -49,12 +50,17 @@ const validateNumericFields = (fields, data) => {
 };
 
 // Get all bikes (optionally filter by location)
-router.get('/', catchAsync(async (req, res) => {
+router.get('/', optionalAuthenticateToken, catchAsync(async (req, res) => {
   const { locationId, q } = req.query;
   const query = {};
-  if (locationId) {
+
+  // For admin users, strictly enforce their assigned location
+  if (req.user && req.user.role === 'admin' && req.user.locationId) {
+    query.locationId = req.user.locationId;
+  } else if (locationId) {
     query.locationId = locationId;
   }
+
   if (q && typeof q === 'string' && q.trim() !== '') {
     const search = q.trim();
     const isNumeric = /^\d+$/.test(search);
@@ -176,6 +182,15 @@ router.post('/', authenticateToken, authorize(['admin', 'superadmin']), catchAsy
     });
   }
 
+  // Brand-Model relationship validation
+  if (!validateBrandModelMatch(brand, name)) {
+    const correctBrand = getBrandForModel(name);
+    return res.status(400).json({
+      message: `Invalid brand-model combination. ${name} belongs to ${correctBrand}.`,
+      field: 'brand'
+    });
+  }
+
   // Numeric fields validation
   const numericFields = [
     'pricePerHour', 'price12Hours', 'pricePerWeek', 'kmLimit',
@@ -207,7 +222,25 @@ router.post('/', authenticateToken, authorize(['admin', 'superadmin']), catchAsy
 
 // Update bike (admin only)
 router.put('/:id', authenticateToken, authorize(['admin', 'superadmin']), catchAsync(async (req, res) => {
+  const bike = await Bike.findById(req.params.id);
+  if (!bike) {
+    return res.status(404).json({ message: 'Bike not found' });
+  }
+
   const updateData = { ...req.body };
+
+  // Brand-Model relationship validation
+  if (req.body.name || req.body.brand) {
+    const finalName = req.body.name || bike.name;
+    const finalBrand = req.body.brand || bike.brand;
+    if (!validateBrandModelMatch(finalBrand, finalName)) {
+      const correctBrand = getBrandForModel(finalName);
+      return res.status(400).json({
+        message: `Invalid brand-model combination. ${finalName} belongs to ${correctBrand}.`,
+        field: 'brand'
+      });
+    }
+  }
 
   // Numeric fields validation
   const numericFields = [

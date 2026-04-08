@@ -156,85 +156,7 @@ const toLocalISOString = (date: Date) => {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
 
-const PREDEFINED_BIKE_SPECS = [
-  {
-    brand: 'Honda',
-    models: [
-      'Activa 6G',
-      'Activa 125',
-      'Dio',
-      'Shine',
-      'Unicorn',
-      'Hornet 2.0',
-      'Hness CB350',
-      'CB350RS',
-    ],
-  },
-  {
-    brand: 'TVS',
-    models: [
-      'Jupiter',
-      'iQube',
-      'Ntorq 125',
-      'Apache RTR 160',
-      'Apache RTR 200',
-      'Raider',
-      'XL100',
-      'Ronin',
-    ],
-  },
-  {
-    brand: 'Suzuki',
-    models: ['Access 125', 'Burgman Street', 'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'V-Strom SX'],
-  },
-  {
-    brand: 'Yamaha',
-    models: ['Ray ZR 125', 'Fascino 125', 'FZ-S FI', 'MT-15 V2', 'R15 V4', 'Aerox 155', 'FZX'],
-  },
-  {
-    brand: 'Hero',
-    models: [
-      'Splendor Plus',
-      'HF Deluxe',
-      'Passion XTEC',
-      'Glamour',
-      'Xpulse 200 4V',
-      'Destini 125',
-      'Pleasure Plus',
-      'Vida V1',
-    ],
-  },
-  {
-    brand: 'Royal Enfield',
-    models: [
-      'Classic 350',
-      'Bullet 350',
-      'Meteor 350',
-      'Hunter 350',
-      'Himalayan 450',
-      'Continental GT 650',
-      'Interceptor 650',
-    ],
-  },
-  {
-    brand: 'Bajaj',
-    models: [
-      'Pulsar 125',
-      'Pulsar 150',
-      'Pulsar NS200',
-      'Dominar 400',
-      'Chetak',
-      'Platina',
-      'Avenger Cruise 220',
-    ],
-  },
-  {
-    brand: 'KTM',
-    models: ['Duke 200', 'Duke 250', 'Duke 390', 'RC 200', 'RC 390', 'Adventure 390'],
-  },
-  { brand: 'Ola', models: ['S1 Pro', 'S1 Air', 'S1 X'] },
-  { brand: 'Ather', models: ['450X', '450S', 'Rizta'] },
-];
+import { PREDEFINED_BIKE_SPECS, getBrandForModel, validateBrandModelMatch } from '@/lib/bikeSpecs';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -295,6 +217,8 @@ export default function Admin() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const timeTickRef = useRef<number | null>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
 
   const [bikeForm, setBikeForm] = useState<any>({
     name: '',
@@ -380,6 +304,18 @@ export default function Admin() {
     const blockedKeys = ['e', 'E', '+', '-'];
     if (blockedKeys.includes(e.key)) {
       e.preventDefault();
+    }
+  };
+
+  const handleScroll = (source: 'top' | 'bottom') => {
+    const top = topScrollRef.current;
+    const bottom = bottomScrollRef.current;
+    if (!top || !bottom) return;
+
+    if (source === 'top') {
+      bottom.scrollLeft = top.scrollLeft;
+    } else {
+      top.scrollLeft = bottom.scrollLeft;
     }
   };
 
@@ -591,27 +527,26 @@ export default function Admin() {
           ? current.locationId?.id || current.locationId?._id || current.locationId?.toString?.()
           : current?.locationId;
 
-      const rawSavedLocation = localStorage.getItem('selectedLocation') || '';
-      let normalizedLocationId = assignedLocationId || rawSavedLocation;
+      // For admins, we MUST use their assigned location, ignore localStorage
+      let normalizedLocationId = assignedLocationId;
 
       try {
         const locationsData = await locationsAPI.getAll();
         setLocations(locationsData);
         const ids = new Set(locationsData.map((l: Location) => l.id));
+        
         if (assignedLocationId && ids.has(assignedLocationId)) {
           normalizedLocationId = assignedLocationId;
           localStorage.setItem('selectedLocation', assignedLocationId);
-        }
-        if (normalizedLocationId && !ids.has(normalizedLocationId)) {
-          const byName = locationsData.find((l: Location) => l.name === normalizedLocationId);
-          if (byName?.id) {
-            normalizedLocationId = byName.id;
-            localStorage.setItem('selectedLocation', byName.id);
+        } else {
+          // If no assigned location or invalid, fallback to localStorage but admins should have one
+          const rawSavedLocation = localStorage.getItem('selectedLocation') || '';
+          if (rawSavedLocation && ids.has(rawSavedLocation)) {
+            normalizedLocationId = rawSavedLocation;
+          } else if (locationsData.length > 0) {
+            normalizedLocationId = locationsData[0].id;
+            localStorage.setItem('selectedLocation', normalizedLocationId);
           }
-        }
-        if (!normalizedLocationId && locationsData.length > 0) {
-          normalizedLocationId = locationsData[0].id;
-          localStorage.setItem('selectedLocation', normalizedLocationId);
         }
       } catch {
         setLocations([]);
@@ -649,21 +584,28 @@ export default function Admin() {
       // Fetch bike specs
       try {
         const specs = await bikesAPI.getSpecs();
-        // Merge predefined specs with database specs
-        const mergedSpecs = [...PREDEFINED_BIKE_SPECS];
+        // Merge predefined specs with database specs, but only if they don't contradict
+        const mergedSpecs = [...PREDEFINED_BIKE_SPECS.map(s => ({ ...s, models: [...s.models] }))];
         specs.forEach((dbSpec: any) => {
-          const existing = mergedSpecs.find(
-            (s) => s.brand.toLowerCase() === dbSpec.brand.toLowerCase()
-          );
-          if (existing) {
-            dbSpec.models.forEach((m: string) => {
-              if (!existing.models.some((em) => em.toLowerCase() === m.toLowerCase())) {
-                existing.models.push(m);
+          const dbBrand = dbSpec.brand;
+          dbSpec.models.forEach((m: string) => {
+            const correctBrand = getBrandForModel(m);
+            // Only add model if it's either:
+            // 1. Not in our predefined list (new/custom model)
+            // 2. In our list and associated with the correct brand
+            if (!correctBrand || correctBrand.toLowerCase() === dbBrand.toLowerCase()) {
+              const existing = mergedSpecs.find(
+                (s) => s.brand.toLowerCase() === dbBrand.toLowerCase()
+              );
+              if (existing) {
+                if (!existing.models.some((em) => em.toLowerCase() === m.toLowerCase())) {
+                  existing.models.push(m);
+                }
+              } else {
+                mergedSpecs.push({ brand: dbBrand, models: [m] });
               }
-            });
-          } else {
-            mergedSpecs.push(dbSpec);
-          }
+            }
+          });
         });
         setBikeSpecs(mergedSpecs);
       } catch {
@@ -962,6 +904,40 @@ export default function Admin() {
           .includes(q)
       ) {
         return true;
+      }
+
+      // Match Joined Date (createdAt)
+      if (user.createdAt) {
+        const date = new Date(user.createdAt);
+        if (!isNaN(date.getTime())) {
+          const yyyy = date.getFullYear().toString();
+          const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+          const dd = date.getDate().toString().padStart(2, '0');
+
+          // Possible formats
+          const standard = `${yyyy}-${mm}-${dd}`;
+          const display = `${dd}/${mm}/${yyyy}`;
+          const monthYear = `${mm}/${yyyy}`;
+          const m = (date.getMonth() + 1).toString();
+          const d = date.getDate().toString();
+
+          const normalize = (s: string) => s.replace(/[-/.]/g, '/');
+          const qNormalized = normalize(q);
+
+          const possibleDates = [
+            normalize(standard),
+            normalize(display),
+            normalize(monthYear),
+            yyyy,
+            normalize(`${d}/${m}/${yyyy}`),
+            normalize(`${m}/${d}/${yyyy}`),
+            normalize(`${m}/${yyyy}`),
+          ];
+
+          if (possibleDates.some((dateStr) => dateStr.includes(qNormalized))) {
+            return true;
+          }
+        }
       }
 
       // Match Rented Bike Name
@@ -1732,20 +1708,33 @@ export default function Admin() {
                   />
                 </div>
 
-                <div className="bg-card rounded-2xl shadow-card overflow-hidden">
-                  <div className="w-full overflow-x-auto">
-                    <table className="w-full min-w-[1200px]">
-                      <thead className="bg-muted/50">
+                <div className="bg-card rounded-2xl shadow-card border border-border">
+                  {/* Top scrollbar synced with bottom */}
+                  <div
+                    ref={topScrollRef}
+                    className="w-full overflow-x-auto h-5 bg-muted/30 border-b border-border"
+                    onScroll={() => handleScroll('top')}
+                  >
+                    <div className="min-w-[1200px] h-1" />
+                  </div>
+
+                  <div
+                    ref={bottomScrollRef}
+                    className="w-full overflow-x-auto max-h-[70vh] overflow-y-auto"
+                    onScroll={() => handleScroll('bottom')}
+                  >
+                    <table className="w-full min-w-[1200px] border-separate border-spacing-0">
+                      <thead className="bg-muted sticky top-0 z-20">
                         <tr>
-                          <th className="text-left px-6 py-4 font-medium">Booking</th>
-                          <th className="text-left px-6 py-4 font-medium">Bike</th>
-                          <th className="text-left px-6 py-4 font-medium">User</th>
-                          <th className="text-left px-6 py-4 font-medium">Start</th>
-                          <th className="text-left px-6 py-4 font-medium">End</th>
-                          <th className="text-left px-6 py-4 font-medium">Status</th>
-                          <th className="text-left px-6 py-4 font-medium">Booking Price</th>
-                          <th className="text-left px-6 py-4 font-medium">Extras</th>
-                          <th className="text-left px-6 py-4 font-medium">Actions</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">Booking</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">Bike</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">User</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">Start</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">End</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">Status</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">Booking Price</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">Extras</th>
+                          <th className="text-left px-6 py-4 font-medium border-b border-border">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -1778,18 +1767,18 @@ export default function Admin() {
 
                             return (
                               <tr key={r.id} className="hover:bg-muted/30">
-                                <td className="px-6 py-4 font-medium">#{r.id.slice(0, 8)}</td>
-                                <td className="px-6 py-4">{bike?.name || r.bikeId}</td>
-                                <td className="px-6 py-4">{user?.name || r.userId}</td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 font-medium border-b border-border">#{r.id.slice(0, 8)}</td>
+                                <td className="px-6 py-4 border-b border-border">{bike?.name || r.bikeId}</td>
+                                <td className="px-6 py-4 border-b border-border">{user?.name || r.userId}</td>
+                                <td className="px-6 py-4 border-b border-border">
                                   {new Date(r.pickupTime || r.startTime).toLocaleString()}
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 border-b border-border">
                                   {r.dropoffTime || r.endTime
                                     ? new Date(r.dropoffTime || r.endTime).toLocaleString()
                                     : '-'}
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 border-b border-border">
                                   <Badge
                                     className={
                                       statusStyles[r.status as keyof typeof statusStyles]?.color ||
@@ -1799,10 +1788,10 @@ export default function Admin() {
                                     {r.status}
                                   </Badge>
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 border-b border-border">
                                   <span className="font-medium">₹{bookingPrice.toFixed(2)}</span>
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 border-b border-border">
                                   {extras > 0 ? (
                                     <span className="font-medium text-primary">
                                       ₹{extras.toFixed(2)}
@@ -1811,7 +1800,7 @@ export default function Admin() {
                                     <span className="text-muted-foreground">-</span>
                                   )}
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 border-b border-border">
                                   <div className="flex items-center gap-2">
                                     <Button
                                       variant="ghost"
@@ -1986,17 +1975,17 @@ export default function Admin() {
               />
             </div>
 
-            <div className="bg-card rounded-2xl shadow-card overflow-hidden">
-              <div className="w-full overflow-x-auto">
-                <table className="w-full min-w-[900px]">
-                  <thead className="bg-muted/50">
+            <div className="bg-card rounded-2xl shadow-card border border-border">
+              <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+                <table className="w-full min-w-[900px] border-separate border-spacing-0">
+                  <thead className="bg-muted sticky top-0 z-20">
                     <tr>
-                      <th className="text-left px-6 py-4 font-medium">User</th>
-                      <th className="text-left px-6 py-4 font-medium">Role</th>
-                      <th className="text-left px-6 py-4 font-medium">Documents</th>
-                      <th className="text-left px-6 py-4 font-medium">Status</th>
-                      <th className="text-left px-6 py-4 font-medium">Joined</th>
-                      <th className="text-left px-6 py-4 font-medium">Actions</th>
+                      <th className="text-left px-6 py-4 font-medium border-b border-border">User</th>
+                      <th className="text-left px-6 py-4 font-medium border-b border-border">Role</th>
+                      <th className="text-left px-6 py-4 font-medium border-b border-border">Documents</th>
+                      <th className="text-left px-6 py-4 font-medium border-b border-border">Status</th>
+                      <th className="text-left px-6 py-4 font-medium border-b border-border">Joined</th>
+                      <th className="text-left px-6 py-4 font-medium border-b border-border">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -2010,19 +1999,19 @@ export default function Admin() {
                       const StatusIcon = statusStyles[status as keyof typeof statusStyles].icon;
                       return (
                         <tr key={user.id} className="hover:bg-muted/30">
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 border-b border-border">
                             <div>
                               <p className="font-medium">{user.name}</p>
                               <p className="text-sm text-muted-foreground">{user.email}</p>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 border-b border-border">
                             <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                               {user.role}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4">{docCount}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 border-b border-border">{docCount}</td>
+                          <td className="px-6 py-4 border-b border-border">
                             <Badge
                               className={statusStyles[status as keyof typeof statusStyles].color}
                             >
@@ -2030,10 +2019,10 @@ export default function Admin() {
                               {status.charAt(0).toUpperCase() + status.slice(1)}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 text-muted-foreground">
+                          <td className="px-6 py-4 text-muted-foreground border-b border-border">
                             {new Date(user.createdAt).toLocaleDateString()}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 border-b border-border">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -2291,7 +2280,13 @@ export default function Admin() {
                 <Select
                   value={bikeForm.brand}
                   onValueChange={(v) => {
-                    setBikeForm({ ...bikeForm, brand: v, name: '' });
+                    const modelsForBrand = bikeSpecs.find((s) => s.brand === v)?.models || [];
+                    const isModelValid = modelsForBrand.includes(bikeForm.name);
+                    setBikeForm({
+                      ...bikeForm,
+                      brand: v,
+                      name: isModelValid ? bikeForm.name : '',
+                    });
                   }}
                 >
                   <SelectTrigger>
@@ -2310,20 +2305,36 @@ export default function Admin() {
                 <Label>Vehicle Name</Label>
                 <Select
                   value={bikeForm.name}
-                  onValueChange={(v) => setBikeForm({ ...bikeForm, name: v })}
-                  disabled={!bikeForm.brand}
+                  onValueChange={(v) => {
+                    const correctBrand = getBrandForModel(v);
+                    if (correctBrand) {
+                      setBikeForm({ ...bikeForm, name: v, brand: correctBrand });
+                    } else {
+                      setBikeForm({ ...bikeForm, name: v });
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(bikeSpecs.find((s) => s.brand === bikeForm.brand)?.models || []).map(
-                      (model: string) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      )
-                    )}
+                    {bikeForm.brand
+                      ? (bikeSpecs.find((s) => s.brand === bikeForm.brand)?.models || []).map(
+                          (model: string) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          )
+                        )
+                      : bikeSpecs
+                          .flatMap((s) => s.models)
+                          .filter((value, index, self) => self.indexOf(value) === index) // Unique models
+                          .sort()
+                          .map((model: string) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -2690,6 +2701,16 @@ export default function Admin() {
                       image: bikeForm.image,
                       images: bikeForm.images,
                     };
+
+                    // Client-side brand-model validation
+                    if (!validateBrandModelMatch(payload.brand, payload.name)) {
+                      toast({
+                        title: 'Brand-Model Mismatch',
+                        description: `${payload.name} belongs to ${getBrandForModel(payload.name)}.`,
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
                     // Always include category if it exists in the form
                     if (bikeForm.category) {

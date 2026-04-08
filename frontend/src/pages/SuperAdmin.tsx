@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,85 +72,7 @@ const statusStyles = {
   rejected: { color: 'bg-destructive/10 text-destructive', icon: XCircle },
 };
 
-const PREDEFINED_BIKE_SPECS = [
-  {
-    brand: 'Honda',
-    models: [
-      'Activa 6G',
-      'Activa 125',
-      'Dio',
-      'Shine',
-      'Unicorn',
-      'Hornet 2.0',
-      'Hness CB350',
-      'CB350RS',
-    ],
-  },
-  {
-    brand: 'TVS',
-    models: [
-      'Jupiter',
-      'iQube',
-      'Ntorq 125',
-      'Apache RTR 160',
-      'Apache RTR 200',
-      'Raider',
-      'XL100',
-      'Ronin',
-    ],
-  },
-  {
-    brand: 'Suzuki',
-    models: ['Access 125', 'Burgman Street', 'Avenis', 'Gixxer 150', 'Gixxer SF 250', 'V-Strom SX'],
-  },
-  {
-    brand: 'Yamaha',
-    models: ['Ray ZR 125', 'Fascino 125', 'FZ-S FI', 'MT-15 V2', 'R15 V4', 'Aerox 155', 'FZX'],
-  },
-  {
-    brand: 'Hero',
-    models: [
-      'Splendor Plus',
-      'HF Deluxe',
-      'Passion XTEC',
-      'Glamour',
-      'Xpulse 200 4V',
-      'Destini 125',
-      'Pleasure Plus',
-      'Vida V1',
-    ],
-  },
-  {
-    brand: 'Royal Enfield',
-    models: [
-      'Classic 350',
-      'Bullet 350',
-      'Meteor 350',
-      'Hunter 350',
-      'Himalayan 450',
-      'Continental GT 650',
-      'Interceptor 650',
-    ],
-  },
-  {
-    brand: 'Bajaj',
-    models: [
-      'Pulsar 125',
-      'Pulsar 150',
-      'Pulsar NS200',
-      'Dominar 400',
-      'Chetak',
-      'Platina',
-      'Avenger Cruise 220',
-    ],
-  },
-  {
-    brand: 'KTM',
-    models: ['Duke 200', 'Duke 250', 'Duke 390', 'RC 200', 'RC 390', 'Adventure 390'],
-  },
-  { brand: 'Ola', models: ['S1 Pro', 'S1 Air', 'S1 X'] },
-  { brand: 'Ather', models: ['450X', '450S', 'Rizta'] },
-];
+import { PREDEFINED_BIKE_SPECS, getBrandForModel, validateBrandModelMatch } from '@/lib/bikeSpecs';
 
 const superAdminTabIds = [
   'dashboard',
@@ -214,6 +136,8 @@ export default function SuperAdmin() {
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [bookingSearchQuery, setBookingSearchQuery] = useState('');
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
   const [documentsSearchQuery, setDocumentsSearchQuery] = useState('');
   const [bikes, setBikes] = useState<BikeType[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -376,6 +300,18 @@ export default function SuperAdmin() {
       e.preventDefault();
     }
   };
+
+  const handleScroll = (source: 'top' | 'bottom') => {
+    const top = topScrollRef.current;
+    const bottom = bottomScrollRef.current;
+    if (!top || !bottom) return;
+
+    if (source === 'top') {
+      bottom.scrollLeft = top.scrollLeft;
+    } else {
+      top.scrollLeft = bottom.scrollLeft;
+    }
+  };
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -491,20 +427,28 @@ export default function SuperAdmin() {
         ]);
 
       if (specsData) {
-        const mergedSpecs = [...PREDEFINED_BIKE_SPECS];
+        // Merge predefined specs with database specs, but only if they don't contradict
+        const mergedSpecs = [...PREDEFINED_BIKE_SPECS.map(s => ({ ...s, models: [...s.models] }))];
         specsData.forEach((dbSpec: any) => {
-          const existing = mergedSpecs.find(
-            (s) => s.brand.toLowerCase() === dbSpec.brand.toLowerCase()
-          );
-          if (existing) {
-            dbSpec.models.forEach((m: string) => {
-              if (!existing.models.some((em) => em.toLowerCase() === m.toLowerCase())) {
-                existing.models.push(m);
+          const dbBrand = dbSpec.brand;
+          dbSpec.models.forEach((m: string) => {
+            const correctBrand = getBrandForModel(m);
+            // Only add model if it's either:
+            // 1. Not in our predefined list (new/custom model)
+            // 2. In our list and associated with the correct brand
+            if (!correctBrand || correctBrand.toLowerCase() === dbBrand.toLowerCase()) {
+              const existing = mergedSpecs.find(
+                (s) => s.brand.toLowerCase() === dbBrand.toLowerCase()
+              );
+              if (existing) {
+                if (!existing.models.some((em) => em.toLowerCase() === m.toLowerCase())) {
+                  existing.models.push(m);
+                }
+              } else {
+                mergedSpecs.push({ brand: dbBrand, models: [m] });
               }
-            });
-          } else {
-            mergedSpecs.push(dbSpec);
-          }
+            }
+          });
         });
         setBikeSpecs(mergedSpecs);
       }
@@ -1916,28 +1860,41 @@ export default function SuperAdmin() {
                   />
                 </div>
 
-                <div className="bg-card rounded-2xl shadow-card overflow-hidden">
-                  <div className="w-full overflow-x-auto">
-                    <table className="w-full min-w-[900px]">
-                      <thead className="bg-muted/50">
+                <div className="bg-card rounded-2xl shadow-card border border-border">
+                  {/* Top scrollbar synced with bottom */}
+                  <div
+                    ref={topScrollRef}
+                    className="w-full overflow-x-auto h-5 bg-muted/30 border-b border-border"
+                    onScroll={() => handleScroll('top')}
+                  >
+                    <div className="min-w-[1200px] h-1" />
+                  </div>
+
+                  <div
+                    ref={bottomScrollRef}
+                    className="w-full overflow-x-auto max-h-[70vh] overflow-y-auto"
+                    onScroll={() => handleScroll('bottom')}
+                  >
+                    <table className="w-full min-w-[1200px] border-separate border-spacing-0">
+                      <thead className="bg-muted sticky top-0 z-20">
                         <tr>
-                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap border-b border-border">
                             Booking
                           </th>
-                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap border-b border-border">
                             Bike
                           </th>
-                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap border-b border-border">
                             User
                           </th>
-                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap border-b border-border">
                             Start
                           </th>
-                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">End</th>
-                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap border-b border-border">End</th>
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap border-b border-border">
                             Status
                           </th>
-                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap">
+                          <th className="text-left px-6 py-4 font-medium whitespace-nowrap border-b border-border">
                             Actions
                           </th>
                         </tr>
@@ -1972,21 +1929,21 @@ export default function SuperAdmin() {
                               filteredUsers.find((u) => u.id === r.userId) ||
                               users.find((u) => u.id === r.userId);
                             return (
-                              <tr key={r.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">#{r.id.slice(0, 8)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                              <tr key={r.id} className="hover:bg-muted/30">
+                                <td className="px-6 py-4 whitespace-nowrap border-b border-border">#{r.id.slice(0, 8)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap border-b border-border">
                                   {bike?.name || r.bikeId}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="px-6 py-4 whitespace-nowrap border-b border-border">
                                   {user?.name || r.userId}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="px-6 py-4 whitespace-nowrap border-b border-border">
                                   {new Date(r.startTime).toLocaleString()}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="px-6 py-4 whitespace-nowrap border-b border-border">
                                   {r.endTime ? new Date(r.endTime).toLocaleString() : '-'}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="px-6 py-4 whitespace-nowrap border-b border-border">
                                   <Badge
                                     className={
                                       statusStyles[r.status as keyof typeof statusStyles]?.color ||
@@ -1996,7 +1953,7 @@ export default function SuperAdmin() {
                                     {r.status}
                                   </Badge>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="px-6 py-4 whitespace-nowrap border-b border-border">
                                   <div className="flex gap-2">
                                     {r.status === 'active' && (
                                       <Button
@@ -2068,26 +2025,26 @@ export default function SuperAdmin() {
                 />
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50">
+            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+              <table className="w-full border-separate border-spacing-0">
+                <thead className="bg-muted sticky top-0 z-20">
                   <tr>
-                    <th className="text-left px-6 py-4 font-medium">User</th>
-                    <th className="text-left px-6 py-4 font-medium">Role</th>
-                    <th className="text-left px-6 py-4 font-medium">Joined</th>
-                    <th className="text-left px-6 py-4 font-medium">Actions</th>
+                    <th className="text-left px-6 py-4 font-medium border-b border-border">User</th>
+                    <th className="text-left px-6 py-4 font-medium border-b border-border">Role</th>
+                    <th className="text-left px-6 py-4 font-medium border-b border-border">Joined</th>
+                    <th className="text-left px-6 py-4 font-medium border-b border-border">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-muted/30">
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-b border-border">
                         <div>
                           <p className="font-medium">{user.name}</p>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-b border-border">
                         <Badge
                           variant={
                             user.role === 'admin'
@@ -2100,10 +2057,10 @@ export default function SuperAdmin() {
                           {user.role}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 text-muted-foreground">
+                      <td className="px-6 py-4 text-muted-foreground border-b border-border">
                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-b border-border">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -2667,9 +2624,15 @@ export default function SuperAdmin() {
                 <Select
                   value={bikeForm.brand}
                   onValueChange={(v) => {
-                    setBikeForm({ ...bikeForm, brand: v, name: '' });
+                    const modelsForBrand = bikeSpecs.find((s) => s.brand === v)?.models || [];
+                    const isModelValid = modelsForBrand.includes(bikeForm.name);
+                    setBikeForm({
+                      ...bikeForm,
+                      brand: v,
+                      name: isModelValid ? bikeForm.name : '',
+                    });
                     setBikeFormErrors((prev) => {
-                      const { brand: _, ...rest } = prev;
+                      const { brand: _, name: __, ...rest } = prev;
                       return rest;
                     });
                   }}
@@ -2696,25 +2659,39 @@ export default function SuperAdmin() {
                 <Select
                   value={bikeForm.name}
                   onValueChange={(v) => {
-                    setBikeForm({ ...bikeForm, name: v });
+                    const correctBrand = getBrandForModel(v);
+                    if (correctBrand) {
+                      setBikeForm({ ...bikeForm, name: v, brand: correctBrand });
+                    } else {
+                      setBikeForm({ ...bikeForm, name: v });
+                    }
                     setBikeFormErrors((prev) => {
-                      const { name: _, ...rest } = prev;
+                      const { name: _, brand: __, ...rest } = prev;
                       return rest;
                     });
                   }}
-                  disabled={!bikeForm.brand}
                 >
                   <SelectTrigger className={bikeFormErrors.name ? 'border-destructive' : ''}>
                     <SelectValue placeholder="Select Vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(bikeSpecs.find((s) => s.brand === bikeForm.brand)?.models || []).map(
-                      (model: string) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      )
-                    )}
+                    {bikeForm.brand
+                      ? (bikeSpecs.find((s) => s.brand === bikeForm.brand)?.models || []).map(
+                          (model: string) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          )
+                        )
+                      : bikeSpecs
+                          .flatMap((s) => s.models)
+                          .filter((value, index, self) => self.indexOf(value) === index) // Unique models
+                          .sort()
+                          .map((model: string) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
                   </SelectContent>
                 </Select>
                 {bikeFormErrors.name && (
@@ -3141,6 +3118,16 @@ export default function SuperAdmin() {
                       image: bikeForm.image,
                       images: bikeForm.images,
                     };
+
+                    // Client-side brand-model validation
+                    if (!validateBrandModelMatch(payload.brand, payload.name)) {
+                      toast({
+                        title: 'Brand-Model Mismatch',
+                        description: `${payload.name} belongs to ${getBrandForModel(payload.name)}.`,
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
                     payload.kmLimit = bikeForm.kmLimit ? parseFloat(bikeForm.kmLimit) : null;
 

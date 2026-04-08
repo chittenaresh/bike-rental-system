@@ -10,10 +10,19 @@ import AppError from '../utils/appError.js';
 
 const router = express.Router();
 
-// Get all rentals (TEMP: DISABLED AUTH FOR TESTING)
-router.get('/', catchAsync(async (req, res) => {
- 
-  const rentals = await Rental.find({})
+// Get all rentals
+router.get('/', authenticateToken, catchAsync(async (req, res) => {
+  const query = {};
+
+  // For admin users, strictly enforce their assigned location
+  if (req.user && req.user.role === 'admin' && req.user.locationId) {
+    // We need to filter by bikeId.locationId
+    const bikesAtLocation = await Bike.find({ locationId: req.user.locationId }).select('_id');
+    const bikeIds = bikesAtLocation.map(b => b._id);
+    query.bikeId = { $in: bikeIds };
+  }
+
+  const rentals = await Rental.find(query)
     .populate({
       path: 'bikeId',
       select: 'name type brand image pricePerHour kmLimit locationId excessKmCharge weekdayRate weekendRate',

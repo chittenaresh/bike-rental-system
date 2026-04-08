@@ -14,6 +14,7 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   // Forgot Password States
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -127,44 +128,42 @@ export default function Auth() {
     }
 
     // Normal Login/Signup Flow
-    const errors: string[] = [];
+    setFieldErrors({});
 
-    // Email Validation
-    const emailError = validateEmail(formData.email);
-    if (emailError) {
-      errors.push('invalid email');
-    }
-
-    // Name Validation - Only for Signup
-    if (!isLogin) {
+    // Login flow: minimal client checks; rely on backend for auth failures
+    if (isLogin) {
+      const emailError = validateEmail(formData.email);
+      if (emailError) {
+        setFieldErrors({ email: 'Invalid email format' });
+        toast({ title: 'Error', description: 'Invalid email format', variant: 'destructive' });
+        return;
+      }
+      if (!formData.password) {
+        setFieldErrors({ password: 'Password is required' });
+        toast({ title: 'Error', description: 'Password is required', variant: 'destructive' });
+        return;
+      }
+    } else {
+      // Signup validations
       const nameError = validateName(formData.name);
       if (nameError) {
-        errors.push(nameError);
+        toast({ title: 'Error', description: nameError, variant: 'destructive' });
+        return;
       }
-    }
-
-    // Password Validation
-    if (!isLogin) {
+      const emailError = validateEmail(formData.email);
+      if (emailError) {
+        toast({ title: 'Error', description: emailError, variant: 'destructive' });
+        return;
+      }
       const passwordError = validatePassword(formData.password);
       if (passwordError) {
-        errors.push(passwordError);
+        toast({ title: 'Weak Password', description: passwordError, variant: 'destructive' });
+        return;
       }
-    } else if (!formData.password) {
-      // For login, check if password is empty
-      errors.push('invalid password');
-    }
-
-    if (errors.length > 0) {
-      const finalMessage =
-        isLogin && errors.includes('invalid email') && errors.includes('invalid password')
-          ? 'invalid email and password'
-          : errors.join(', ');
-
-      toast({ title: 'Error', description: finalMessage, variant: 'destructive' });
-      return;
     }
 
     setIsLoading(true);
+    setFieldErrors({}); // Clear previous errors
     try {
       if (isLogin) {
         const data = await authAPI.login({ email: formData.email, password: formData.password });
@@ -204,11 +203,44 @@ export default function Auth() {
         }
       }
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'An error occurred. Please try again.',
-        variant: 'destructive',
-      });
+      const message = error.message?.toLowerCase() || '';
+
+      if (isLogin) {
+        if (message.includes('invalid email') && message.includes('password')) {
+          setFieldErrors({ email: 'Invalid email or password', password: 'Invalid email or password' });
+          toast({
+            title: 'Error',
+            description: 'Invalid email or password',
+            variant: 'destructive',
+          });
+        } else if (message.includes('invalid email')) {
+          setFieldErrors({ email: 'Invalid email' });
+          toast({
+            title: 'Error',
+            description: 'Invalid email',
+            variant: 'destructive',
+          });
+        } else if (message.includes('invalid password')) {
+          setFieldErrors({ password: 'Invalid password' });
+          toast({
+            title: 'Error',
+            description: 'Invalid password',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: error.message || 'An error occurred. Please try again.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: error.message || 'An error occurred. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -445,6 +477,7 @@ export default function Auth() {
                       }}
                       maxLength={100}
                       required
+                      className={fieldErrors.email ? 'border-destructive' : undefined}
                     />
                   </div>
 
@@ -456,10 +489,11 @@ export default function Auth() {
                         id="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
-                        className="hide-password-toggle pr-10"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         required
+                        data-has-error={!!fieldErrors.password}
+                        className={`${fieldErrors.password ? 'border-destructive' : ''} hide-password-toggle pr-10`}
                       />
                       <button
                         type="button"

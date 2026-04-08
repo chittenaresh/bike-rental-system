@@ -397,7 +397,7 @@ function CreateTicketDialog({
         } catch (uploadError) {
           console.error('Failed to upload file:', file.name, uploadError);
           const error = new Error(`Failed to upload ${file.name}`);
-          // @ts-ignore - 'cause' property is ES2022 but we target ES2020
+          // @ts-expect-error - 'cause' property is ES2022 but we target ES2020
           error.cause = uploadError;
           throw error;
         }

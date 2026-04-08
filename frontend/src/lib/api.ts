@@ -44,9 +44,14 @@ function handleAuthError() {
   }
 }
 
-async function apiRequest<T>(path: string, init: RequestInit = {}, isPublic = false): Promise<T> {
+async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('authToken');
-  console.log(`[API] ${init.method || 'GET'} ${path} - Token present: ${!!token}`);
+  const isPublic =
+    path.includes('/bikes') || path.includes('/locations') || path.includes('/auth/login');
+
+  console.log(
+    `[API] ${init.method || 'GET'} ${path} - Token present: ${!!token}, isPublic: ${isPublic}`
+  );
 
   const headers = {
     'Content-Type': 'application/json',
@@ -332,7 +337,7 @@ export const supportAPI = {
   getAll: () => apiRequest<any[]>('/support'),
   getById: (id: string) => apiRequest<any>(`/support/${id}`),
   create: (data: any) =>
-    apiRequest<any>('/support', { method: 'POST', body: JSON.stringify(data) }, true),
+    apiRequest<any>('/support', { method: 'POST', body: JSON.stringify(data) }),
   addMessage: (id: string, data: { content: string; attachments?: string[] }) =>
     apiRequest<any>(`/support/${id}/messages`, { method: 'POST', body: JSON.stringify(data) }),
   updateStatus: (id: string, data: { status?: string; priority?: string }) =>

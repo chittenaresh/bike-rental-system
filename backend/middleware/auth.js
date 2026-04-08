@@ -30,6 +30,29 @@ export function authenticateToken(req, res, next) {
 }
 
 /**
+ * Middleware to authenticate JWT token (optional)
+ * Doesn't fail if token is missing, just sets req.user if present
+ */
+export function optionalAuthenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      // If token is invalid/expired, we don't set user but continue
+      return next();
+    }
+    
+    req.user = decoded;
+    next();
+  });
+}
+
+/**
  * Middleware to restrict access to specific roles
  * @param {string[]} roles - Array of allowed roles
  */
