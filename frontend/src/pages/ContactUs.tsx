@@ -64,6 +64,15 @@ export default function ContactUs() {
     };
 
     loadContactInfo();
+
+    const onLocationChanged = () => {
+      loadContactInfo();
+    };
+
+    window.addEventListener('rideflow:locationChanged', onLocationChanged);
+    return () => {
+      window.removeEventListener('rideflow:locationChanged', onLocationChanged);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -53,6 +53,15 @@ export default function Garage() {
     if (user) {
       checkDocs();
     }
+
+    const onLocationChanged = () => {
+      load();
+    };
+
+    window.addEventListener('rideflow:locationChanged', onLocationChanged);
+    return () => {
+      window.removeEventListener('rideflow:locationChanged', onLocationChanged);
+    };
   }, []);
 
   const checkDocuments = async () => {

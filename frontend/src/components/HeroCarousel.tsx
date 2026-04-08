@@ -46,7 +46,6 @@ export function HeroCarousel({ images }: HeroCarouselProps) {
                 src={image.imageUrl}
                 alt="Premium Bike Rental Service - RideFlow"
                 loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : 'low'}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500"
               />
               {/* Overlay - lighter opacity to show images better */}

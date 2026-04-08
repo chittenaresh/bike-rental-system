@@ -197,8 +197,7 @@ export const Navbar = memo(function Navbar() {
         );
       }
 
-      // Reload page to show bikes for new location
-      window.location.reload();
+      window.dispatchEvent(new CustomEvent('rideflow:locationChanged', { detail: { locationId } }));
     },
     [user]
   );

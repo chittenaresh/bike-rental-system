@@ -20,6 +20,15 @@ export const Footer = memo(function Footer() {
       }
     };
     loadLocation();
+
+    const onLocationChanged = () => {
+      loadLocation();
+    };
+
+    window.addEventListener('rideflow:locationChanged', onLocationChanged);
+    return () => {
+      window.removeEventListener('rideflow:locationChanged', onLocationChanged);
+    };
   }, []);
 
   return (

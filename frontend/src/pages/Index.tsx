@@ -171,6 +171,15 @@ export default function Index() {
     };
 
     loadData();
+
+    const onLocationChanged = () => {
+      loadData();
+    };
+
+    window.addEventListener('rideflow:locationChanged', onLocationChanged);
+    return () => {
+      window.removeEventListener('rideflow:locationChanged', onLocationChanged);
+    };
   }, [navigate]);
 
   const loadSettings = async () => {
@@ -202,7 +211,7 @@ export default function Index() {
       if (selectedLocation) {
         try {
           const loc = await locationsAPI.getById(selectedLocation);
-          if (loc) setLocationName(loc.city || loc.name);
+          if (loc) setLocationName(loc.name || loc.city);
         } catch (e) {
           console.error('Failed to load location for SEO', e);
         }

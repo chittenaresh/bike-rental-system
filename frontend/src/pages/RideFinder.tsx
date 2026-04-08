@@ -72,6 +72,15 @@ export default function RideFinder() {
     if (user) {
       checkDocuments();
     }
+
+    const onLocationChanged = () => {
+      loadBikes();
+    };
+
+    window.addEventListener('rideflow:locationChanged', onLocationChanged);
+    return () => {
+      window.removeEventListener('rideflow:locationChanged', onLocationChanged);
+    };
   }, []);
 
   const checkDocuments = async () => {
