@@ -50,6 +50,7 @@ if (process.env.NODE_ENV !== 'production') {
 // =====================================
 // ✅ PERFORMANCE & UTILITY MIDDLEWARE
 // =====================================
+app.set('trust proxy', true);
 app.use(compression()); // Compress all responses
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev')); // HTTP request logger
 
@@ -82,8 +83,21 @@ const limiter = rateLimit({
 //   ? process.env.ALLOWED_ORIGINS.split(',') 
 //   : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:8080'];
 
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+const defaultOrigins = [
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://bikes-ay5i.vercel.app",
+  process.env.PUBLIC_BASE_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: true, // Allow all origins for testing
+  origin: [...new Set([...defaultOrigins, ...allowedOrigins])],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true
@@ -100,9 +114,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // =====================================
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadsBaseDir = path.join(__dirname, 'uploads');
+const uploadSubDirs = ['documents', 'settings', 'support'];
+
+try {
+  fs.mkdirSync(uploadsBaseDir, { recursive: true });
+  uploadSubDirs.forEach((sub) => fs.mkdirSync(path.join(uploadsBaseDir, sub), { recursive: true }));
+  console.log('[UPLOADS] Static base:', uploadsBaseDir);
+} catch (e) {
+  console.error('[UPLOADS] Failed to ensure upload directories:', e?.message || e);
+}
+
+app.use('/uploads', express.static(uploadsBaseDir));
 // app.use('/uploads', express.static('uploads'));
 
 // =====================================

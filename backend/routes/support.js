@@ -18,6 +18,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'support');
 
+const getPublicBaseUrl = (req) => {
+  const raw = process.env.PUBLIC_BASE_URL || process.env.APP_URL || '';
+  if (raw) return String(raw).replace(/\/+$/, '');
+  return `${req.protocol}://${req.get('host')}`;
+};
+
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -178,10 +184,10 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
     fs.writeFileSync(localFilePath, req.file.buffer);
     
     // Construct local URL
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const fileUrl = `${protocol}://${host}/uploads/support/${fileName}`;
+    const baseUrl = getPublicBaseUrl(req);
+    const fileUrl = `${baseUrl}/uploads/support/${fileName}`;
     
+    console.log('[SUPPORT UPLOAD] Local file path:', localFilePath);
     console.log('[SUPPORT UPLOAD] Local upload successful, file URL:', fileUrl);
     res.json({ imageUrl: fileUrl });
 

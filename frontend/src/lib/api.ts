@@ -1,6 +1,6 @@
 import { handleApiError, isAuthError, logError, AppApiError } from './errorHandler';
 
-// Get API base URL - prioritize relative path in production for Vercel rewrites to avoid CORS
+// Get API base URL - normalize to always include "/api"
 const getApiBase = () => {
   // In production, we strongly prefer the relative /api path to use Vercel's proxy.
   // This avoids all CORS issues and mixed content problems.
@@ -10,10 +10,12 @@ const getApiBase = () => {
 
   // In development or if explicitly overridden, use the env var
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const raw = String(import.meta.env.VITE_API_URL).trim().replace(/\/+$/, '');
+    return raw.endsWith('/api') ? raw : `${raw}/api`;
   }
   if (import.meta.env.VITE_API_BASE) {
-    return import.meta.env.VITE_API_BASE;
+    const raw = String(import.meta.env.VITE_API_BASE).trim().replace(/\/+$/, '');
+    return raw.endsWith('/api') ? raw : `${raw}/api`;
   }
   return '/api';
 };

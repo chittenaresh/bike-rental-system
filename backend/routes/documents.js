@@ -15,6 +15,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'documents');
 
+const getPublicBaseUrl = (req) => {
+  const raw = process.env.PUBLIC_BASE_URL || process.env.APP_URL || '';
+  if (raw) return String(raw).replace(/\/+$/, '');
+  return `${req.protocol}://${req.get('host')}`;
+};
+
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -168,11 +174,11 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
     const localFilePath = path.join(UPLOADS_DIR, fileName);
     fs.writeFileSync(localFilePath, file.buffer);
     
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const fileUrl = `${protocol}://${host}/uploads/documents/${fileName}`;
+    const baseUrl = getPublicBaseUrl(req);
+    const fileUrl = `${baseUrl}/uploads/documents/${fileName}`;
     const key = `documents/${fileName}`;
     
+    console.log('[DOC UPLOAD] Local file path:', localFilePath);
     console.log('[DOC UPLOAD] Local upload successful:', fileUrl);
     res.json({ fileUrl, key });
   } catch (error) {

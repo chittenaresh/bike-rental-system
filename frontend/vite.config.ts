@@ -36,7 +36,7 @@ function suppressProxyErrors(): Plugin {
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }: { mode: string }) => {
   const env = loadEnv(mode, process.cwd());
-  const target = env.VITE_API_PROXY_TARGET || 'http://localhost:3020';
+  const target = env.VITE_API_PROXY_TARGET || 'http://localhost:9000';
   const isProduction = mode === 'production';
 
   return {
