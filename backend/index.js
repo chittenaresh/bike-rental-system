@@ -79,15 +79,11 @@ const limiter = rateLimit({
 // =====================================
 // ✅ CORS CONFIGURATION
 // =====================================
-// const allowedOrigins = process.env.ALLOWED_ORIGINS 
-//   ? process.env.ALLOWED_ORIGINS.split(',') 
-//   : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:8080'];
+// =====================================
+// ✅ CORS CONFIGURATION (FIXED)
+// =====================================
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-const defaultOrigins = [
+const allowedOrigins = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
   "http://localhost:5173",
@@ -97,38 +93,32 @@ const defaultOrigins = [
 ].filter(Boolean);
 
 app.use(cors({
-  origin: [...new Set([...defaultOrigins, ...allowedOrigins])],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman, mobile apps)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.error("❌ CORS Blocked:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+// ✅ VERY IMPORTANT (Fix preflight issue)
+app.options("*", cors());
 // =====================================
 // ✅ MIDDLEWARE
 // =====================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// =====================================
-// ✅ STATIC ASSETS (Optional)
-// =====================================
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsBaseDir = path.join(__dirname, 'uploads');
-const uploadSubDirs = ['documents', 'settings', 'support'];
-
-try {
-  fs.mkdirSync(uploadsBaseDir, { recursive: true });
-  uploadSubDirs.forEach((sub) => fs.mkdirSync(path.join(uploadsBaseDir, sub), { recursive: true }));
-  console.log('[UPLOADS] Static base:', uploadsBaseDir);
-} catch (e) {
-  console.error('[UPLOADS] Failed to ensure upload directories:', e?.message || e);
-}
-
-app.use('/uploads', express.static(uploadsBaseDir));
+// ====================================
+// app.use('/uploads', express.static(uploadsBaseDir));
 // app.use('/uploads', express.static('uploads'));
 
 // =====================================
