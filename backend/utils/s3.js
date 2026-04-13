@@ -26,11 +26,12 @@ export const uploadToS3 = async (buffer, originalName, mimetype, userId = 'guest
 
   await s3.send(
     new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: mimetype,
-    })
+  Bucket: process.env.AWS_BUCKET_NAME,
+  Key: key,
+  Body: buffer,
+  ContentType: mimetype,
+  
+})
   );
 
   

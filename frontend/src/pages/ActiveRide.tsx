@@ -550,13 +550,39 @@ export default function ActiveRide() {
             {bike && (
               <div className="bg-muted/50 rounded-xl p-6 mb-6">
                 <div className="flex items-center gap-4 mb-4">
-                  {bike.image && (
-                    <img
-                      src={bike.image}
-                      alt={`Active ride bike: ${bike.name}`}
-                      className="w-24 h-24 object-cover rounded-lg"
-                    />
-                  )}
+                  {(() => {
+                    const isInvalidPath = (url: string | undefined | null) => {
+                      if (!url || typeof url !== 'string' || url.trim() === '') return true;
+                      const lowerUrl = url.toLowerCase();
+                      return (
+                        lowerUrl.includes('documents/') ||
+                        lowerUrl.includes('placeholder.png') ||
+                        lowerUrl.includes('uploads/') ||
+                        (!lowerUrl.startsWith('http') &&
+                          !lowerUrl.startsWith('https') &&
+                          !lowerUrl.startsWith('data:'))
+                      );
+                    };
+
+                    const validImages = (bike.images || []).filter(
+                      (img: string) => !isInvalidPath(img)
+                    );
+                    const imageUrl =
+                      validImages?.[0] || (!isInvalidPath(bike.image) ? bike.image : null);
+
+                    return (
+                      imageUrl && (
+                        <img
+                          src={imageUrl}
+                          alt={`Active ride bike: ${bike.name}`}
+                          className="w-24 h-24 object-cover rounded-lg"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      )
+                    );
+                  })()}
                   <div>
                     <h2 className="text-2xl font-display font-bold">{bike.name}</h2>
                     {bike.brand && <p className="text-muted-foreground">Brand: {bike.brand}</p>}

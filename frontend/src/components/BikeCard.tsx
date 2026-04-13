@@ -62,17 +62,33 @@ const BikeImageSlider = memo(
     );
 
     const images = useMemo(() => {
-      const imgs = [];
-      if (bike.image) imgs.push(bike.image);
-      if (bike.images && bike.images.length > 0) {
-        imgs.push(...bike.images.filter((img) => img && img.trim() !== ''));
+      // 1. Filter out invalid/empty/hardcoded local fallback paths
+      const isInvalidPath = (url: string) => {
+        if (!url || typeof url !== 'string' || url.trim() === '') return true;
+        const lowerUrl = url.toLowerCase();
+        return (
+          lowerUrl.includes('documents/') ||
+          lowerUrl.includes('placeholder.png') ||
+          lowerUrl.includes('uploads/') ||
+          (!lowerUrl.startsWith('http') && !lowerUrl.startsWith('https') && !lowerUrl.startsWith('data:'))
+        );
+      };
+
+      const validImages = (bike.images || []).filter((img) => !isInvalidPath(img));
+      const mainImage = !isInvalidPath(bike.image) ? bike.image : null;
+
+      // 2. Final logic: Prefer images from array, then main image
+      const imgs = [...validImages];
+      if (mainImage && !imgs.includes(mainImage)) {
+        imgs.push(mainImage);
       }
+      
       return [...new Set(imgs)];
     }, [bike.image, bike.images]);
 
     if (images.length === 0) {
       return (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30">
           <TypeIcon className={`${iconClassName} text-muted-foreground/20`} />
         </div>
       );
@@ -82,9 +98,12 @@ const BikeImageSlider = memo(
       return (
         <img
           src={images[0]}
-          alt={`Rent ${bike.brand} ${bike.name} ${bike.type} - RideFlow`}
+          alt={bike.name}
           loading="lazy"
           className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
       );
     }
@@ -102,9 +121,12 @@ const BikeImageSlider = memo(
             <CarouselItem key={idx} className="pl-0 h-full">
               <img
                 src={img}
-                alt={`Rent ${bike.brand} ${bike.name} ${bike.type} view ${idx + 1} - RideFlow`}
+                alt={`${bike.name} view ${idx + 1}`}
                 loading="lazy"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             </CarouselItem>
           ))}

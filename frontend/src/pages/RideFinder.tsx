@@ -1046,17 +1046,42 @@ export default function RideFinder() {
                     <div className="space-y-4">
                       <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                         <div className="flex items-center gap-4">
-                          {selectedBike.image ? (
-                            <img
-                              src={selectedBike.image}
-                              alt={selectedBike.name}
-                              className="w-16 h-16 object-cover rounded-md"
-                            />
-                          ) : (
-                            <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
-                              <BikeIcon className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          )}
+                          {(() => {
+                            const isInvalidPath = (url: string | undefined | null) => {
+                              if (!url || typeof url !== 'string' || url.trim() === '') return true;
+                              const lowerUrl = url.toLowerCase();
+                              return (
+                                lowerUrl.includes('documents/') ||
+                                lowerUrl.includes('placeholder.png') ||
+                                lowerUrl.includes('uploads/') ||
+                                (!lowerUrl.startsWith('http') &&
+                                  !lowerUrl.startsWith('https') &&
+                                  !lowerUrl.startsWith('data:'))
+                              );
+                            };
+
+                            const validImages = (selectedBike.images || []).filter(
+                              (img: string) => !isInvalidPath(img)
+                            );
+                            const imageUrl =
+                              validImages?.[0] ||
+                              (!isInvalidPath(selectedBike.image) ? selectedBike.image : null);
+
+                            return imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={selectedBike.name}
+                                className="w-16 h-16 object-cover rounded-md"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
+                                <BikeIcon className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            );
+                          })()}
                           <div>
                             <h4 className="font-semibold">{selectedBike.name}</h4>
                             <p className="text-sm text-muted-foreground capitalize">

@@ -1558,33 +1558,52 @@ export default function Admin() {
                       </div>
                     );
                   }
-                  return filtered.map((bike) => (
-                    <div
-                      key={bike.id}
-                      className="border rounded-lg p-2 sm:p-3 flex flex-col bg-card h-full min-w-0"
-                    >
-                      {bike.image && (
-                        <div className="relative mb-2 h-32 sm:h-40 md:h-48 bg-muted rounded-md overflow-hidden flex items-center justify-center flex-shrink-0">
-                          <img
-                            src={bike.image}
-                            alt={`Admin view of ${bike.name}`}
-                            className="max-w-full max-h-full object-contain rounded-md"
-                            style={{ imageRendering: 'auto' as const }}
-                          />
-                          <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
-                            {bike.type}
-                          </Badge>
-                        </div>
-                      )}
-                      {!bike.image && (
-                        <div className="relative mb-2 bg-muted rounded-md h-32 sm:h-40 md:h-48 flex items-center justify-center flex-shrink-0">
-                          <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
-                            {bike.type}
-                          </Badge>
-                          <Bike className="h-12 w-12 text-muted-foreground/50" />
-                        </div>
-                      )}
-                      <div className="flex-1 flex flex-col min-w-0">
+                  return filtered.map((bike) => {
+                    const isInvalidPath = (url: string | undefined | null) => {
+                      if (!url || typeof url !== 'string' || url.trim() === '') return true;
+                      const lowerUrl = url.toLowerCase();
+                      return (
+                        lowerUrl.includes('documents/') ||
+                        lowerUrl.includes('placeholder.png') ||
+                        lowerUrl.includes('uploads/') ||
+                        (!lowerUrl.startsWith('http') &&
+                          !lowerUrl.startsWith('https') &&
+                          !lowerUrl.startsWith('data:'))
+                      );
+                    };
+
+                    const validImages = (bike.images || []).filter((img: string) => !isInvalidPath(img));
+                    const imageUrl = validImages?.[0] || (!isInvalidPath(bike.image) ? bike.image : null);
+
+                    return (
+                      <div
+                        key={bike.id}
+                        className="border rounded-lg p-2 sm:p-3 flex flex-col bg-card h-full min-w-0"
+                      >
+                        {imageUrl ? (
+                          <div className="relative mb-2 h-32 sm:h-40 md:h-48 bg-muted rounded-md overflow-hidden flex items-center justify-center flex-shrink-0">
+                            <img
+                              src={imageUrl}
+                              alt={bike.name}
+                              className="max-w-full max-h-full object-contain rounded-md"
+                              style={{ imageRendering: 'auto' as const }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                            <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
+                              {bike.type}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="relative mb-2 bg-muted rounded-md h-32 sm:h-40 md:h-48 flex items-center justify-center flex-shrink-0">
+                            <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
+                              {bike.type}
+                            </Badge>
+                            <Bike className="h-12 w-12 text-muted-foreground/50" />
+                          </div>
+                        )}
+                        <div className="flex-1 flex flex-col min-w-0">
                         <p className="font-medium mb-1 whitespace-normal">{bike.name}</p>
                         {(bike.brand || bike.year) && (
                           <p className="text-xs text-muted-foreground mb-2 truncate">
@@ -1675,12 +1694,13 @@ export default function Admin() {
                         </div>
                       </div>
                     </div>
-                  ));
-                })()}
-              </div>
+                  );
+                });
+              })()}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Bookings */}
         {activeTab === 'bookings' &&
