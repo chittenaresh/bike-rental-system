@@ -5,7 +5,7 @@ const getApiBase = () => {
   // In production, we strongly prefer the relative /api path to use Vercel's proxy.
   // This avoids all CORS issues and mixed content problems.
   if (import.meta.env.PROD) {
-    return '/api';
+    return 'https://bikes-5-zosq.onrender.com/api';
   }
 
   // In development or if explicitly overridden, use the env var

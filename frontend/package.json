@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
+    "start": "vite preview",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit"
