@@ -4,8 +4,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js",
-    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "dev": "node index.js",
     "seed": "node scripts/seedBikes.js",
     "seed:users": "node scripts/seedUsers.js",
     "seed:locations": "node scripts/seedLocations.js",
