@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { authenticateToken, JWT_SECRET } from '../middleware/auth.js';
 
 const router = express.Router();
+console.log("🔥 AUTH ROUTES LOADED");
 
 // Helper function to generate 6-digit OTP
 const generateOTP = () => {
