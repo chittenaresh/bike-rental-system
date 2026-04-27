@@ -42,7 +42,13 @@ function handleAuthError() {
   if (typeof window !== 'undefined') {
     setAuthToken(null);
     localStorage.removeItem('currentUser');
-    // Don't redirect automatically - let components handle it
+    localStorage.removeItem('authToken');
+    sessionStorage.clear(); // Clear session storage as well
+    
+    // Redirect to login if not already there
+    if (!window.location.pathname.includes('/auth')) {
+      window.location.href = '/auth';
+    }
   }
 }
 
@@ -75,17 +81,9 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     if (!response.ok) {
       console.error(`[API ERROR] ${response.status} ${response.statusText} for ${url}`);
 
-      if (response.status === 401 && !isPublic) {
-        if (token) {
-          console.warn('[API Auth] 401 Unauthorized - Clearing token');
-          setAuthToken(null);
-          localStorage.removeItem('currentUser');
-        }
-        // Do not throw a generic 401 error here, let the general error handling below catch the specific message
-      }
-
-      if (response.status === 403) {
-        console.error('[API Auth] 403 Forbidden - Possible role issue or invalid token');
+      if ((response.status === 401 || response.status === 403) && !isPublic) {
+        console.warn(`[API Auth] ${response.status} - Handling auth error`);
+        handleAuthError();
       }
 
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
@@ -122,6 +120,8 @@ export const authAPI = {
     setAuthToken(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      sessionStorage.clear();
     }
   },
   getCurrentUser: () => apiRequest<any>('/auth/me'),

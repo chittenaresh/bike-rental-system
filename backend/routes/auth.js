@@ -4,6 +4,8 @@ import User from '../models/User.js';
 import { transformUser } from '../utils/transform.js';
 import crypto from 'crypto';
 import { authenticateToken, JWT_SECRET } from '../middleware/auth.js';
+import rateLimit from 'express-rate-limit';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 console.log("🔥 AUTH ROUTES LOADED");
@@ -12,6 +14,15 @@ console.log("🔥 AUTH ROUTES LOADED");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+// Rate limiter for forgot password to prevent abuse
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per window
+  message: { message: 'Too many password reset attempts, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Send Email OTP
 router.post('/send-email-otp', authenticateToken, async (req, res) => {
@@ -327,49 +338,57 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Forgot Password
-router.post('/forgot-password', async (req, res) => {
+// Forgot Password (Secured for Super Admin)
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.json({ message: 'If a user with this email exists, an OTP has been sent.' });
+    const genericMessage = 'If a user with this email exists and is a registered superadmin, an OTP has been sent.';
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    // Only proceed if user exists and is a superadmin
+    if (user && user.role === 'superadmin') {
+      // Generate 6-digit OTP
+      const otp = generateOTP();
+      
+      // Hash OTP before storing for security
+      const hashedOTP = await bcrypt.hash(otp, 10);
+      user.resetPasswordOTP = hashedOTP;
+      user.resetPasswordOTPExpires = Date.now() + 300000; // 5 minutes expiry
+
+      await user.save();
+
+      // Send OTP via email
+      try {
+        const { sendEmail } = await import('../utils/email.js');
+        await sendEmail({
+          to: email,
+          subject: 'RideFlow Super Admin Password Reset OTP',
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; color: #333; border: 1px solid #eee; border-radius: 10px;">
+              <h2 style="color: #ff6600;">Super Admin Password Reset</h2>
+              <p>You requested a password reset for your RideFlow Super Admin account.</p>
+              <p>Your OTP for password reset is:</p>
+              <h1 style="color: #ff6600; font-size: 32px; letter-spacing: 5px; text-align: center; background: #fff5ed; padding: 10px; border-radius: 5px;">${otp}</h1>
+              <p>This code will expire in <b>5 minutes</b>.</p>
+              <p style="color: #666; font-size: 12px; margin-top: 20px; text-align: center;">If you didn't request this, please secure your account immediately.</p>
+            </div>
+          `,
+        });
+        console.log(`OTP generated for superadmin ${email}`);
+      } catch (emailError) {
+        console.error('Error sending OTP email:', emailError);
+      }
+    } else if (user) {
+      console.warn(`Password reset attempt for non-superadmin email: ${email}`);
     }
 
-    // Generate 6-digit OTP
-    const otp = generateOTP();
-    user.resetPasswordOTP = otp;
-    user.resetPasswordOTPExpires = Date.now() + 600000; // 10 minutes
-
-    await user.save();
-
-    // Send OTP via email
-    try {
-      const { sendEmail } = await import('../utils/email.js');
-      await sendEmail({
-        to: email,
-        subject: 'RideFlow Password Reset OTP',
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h2>Password Reset Request</h2>
-            <p>Your OTP for password reset is:</p>
-            <h1 style="color: #ff6600; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
-            <p>This code will expire in 10 minutes.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-          </div>
-        `,
-      });
-      console.log(`OTP sent to ${email}: ${otp}`);
-    } catch (emailError) {
-      console.error('Error sending OTP email:', emailError);
-      // Even if email fails, we don't want to expose if user exists
-    }
-
-    res.json({ message: 'If a user with this email exists, an OTP has been sent.' });
+    // Always return the same generic message to prevent account enumeration
+    res.json({ message: genericMessage });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Error processing request' });
@@ -386,8 +405,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     const user = await User.findOne({
-      email,
-      resetPasswordOTP: otp,
+      email: email.toLowerCase(),
       resetPasswordOTPExpires: { $gt: Date.now() }
     });
 
@@ -395,6 +413,13 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ message: 'Invalid OTP or OTP has expired' });
     }
 
+    // Verify the hashed OTP
+    const isOTPValid = await bcrypt.compare(otp, user.resetPasswordOTP);
+    if (!isOTPValid) {
+      return res.status(400).json({ message: 'Invalid OTP or OTP has expired' });
+    }
+
+    // Update password (pre-save hook will hash it)
     user.password = newPassword;
     user.resetPasswordOTP = undefined;
     user.resetPasswordOTPExpires = undefined;

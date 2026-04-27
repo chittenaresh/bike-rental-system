@@ -329,10 +329,10 @@ export default function SuperAdmin() {
     };
 
     const config = constraints[field];
-    const regex = /^\d*\.?\d*$/;
+    const regex = /^\d*\.?\d{0,2}$/;
 
     if (!regex.test(value)) {
-      setNumericErrors((prev) => ({ ...prev, [field]: 'Only numbers are allowed' }));
+      setNumericErrors((prev) => ({ ...prev, [field]: 'Only numbers with up to 2 decimal places are allowed' }));
       return;
     }
 
@@ -460,12 +460,10 @@ export default function SuperAdmin() {
         description: 'Super Admin access required',
         variant: 'destructive',
       });
-      navigate('/dashboard');
+      navigate('/admin'); // If admin, go to admin, else ProtectedRoute will handle it
       return;
     }
     setCurrentUser(user);
-    console.log('[SuperAdmin] Current User:', user);
-    console.log('[SuperAdmin] Initial selectedLocationFilter:', selectedLocationFilter);
     loadData();
   }, []);
 
@@ -1263,28 +1261,28 @@ export default function SuperAdmin() {
                                   year: bike.year ? String(bike.year) : '',
                                   type: bike.type,
                                   category: bike.category || 'midrange',
-                                  pricePerHour: bike.pricePerHour ? String(Math.round(Number(bike.pricePerHour) * 100) / 100) : '',
-                                  kmLimit: bike.kmLimit ? String(Math.round(Number(bike.kmLimit) * 100) / 100) : '',
+                                  pricePerHour: bike.pricePerHour ? String(parseFloat(Number(bike.pricePerHour).toFixed(2))) : '',
+                                  kmLimit: bike.kmLimit ? String(parseFloat(Number(bike.kmLimit).toFixed(2))) : '',
                                   locationId: bike.locationId,
                                   image: bike.image || '',
                                   images:
                                     bike.images && bike.images.length > 0
                                       ? [...bike.images, '', '', ''].slice(0, 3)
                                       : ['', '', ''],
-                                  weekdayRate: bike.weekdayRate ? String(Math.round(Number(bike.weekdayRate) * 100) / 100) : '',
-                                  weekendRate: bike.weekendRate ? String(Math.round(Number(bike.weekendRate) * 100) / 100) : '',
+                                  weekdayRate: bike.weekdayRate ? String(parseFloat(Number(bike.weekdayRate).toFixed(2))) : '',
+                                  weekendRate: bike.weekendRate ? String(parseFloat(Number(bike.weekendRate).toFixed(2))) : '',
                                   excessKmCharge: bike.excessKmCharge
-                                    ? String(Math.round(Number(bike.excessKmCharge) * 100) / 100)
+                                    ? String(parseFloat(Number(bike.excessKmCharge).toFixed(2)))
                                     : '',
                                   kmLimitPerHour: bike.kmLimitPerHour
-                                    ? String(Math.round(Number(bike.kmLimitPerHour) * 100) / 100)
+                                    ? String(parseFloat(Number(bike.kmLimitPerHour).toFixed(2)))
                                     : '',
                                   minBookingHours: bike.minBookingHours
-                                    ? String(Math.round(Number(bike.minBookingHours) * 100) / 100)
+                                    ? String(parseFloat(Number(bike.minBookingHours).toFixed(2)))
                                     : '',
                                   gstPercentage:
                                     bike.gstPercentage !== undefined && bike.gstPercentage !== null
-                                      ? String(Math.round(Number(bike.gstPercentage) * 100) / 100)
+                                      ? String(parseFloat(Number(bike.gstPercentage).toFixed(2)))
                                       : '18',
                                 });
                                 setBikeDialogOpen(true);
@@ -2766,7 +2764,7 @@ export default function SuperAdmin() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className={bikeFormErrors.brand ? 'text-destructive' : ''}>Brand</Label>
+                <Label className={bikeFormErrors.brand ? 'text-destructive' : ''}>Brand <span className="text-destructive">*</span></Label>
                 <Select
                   value={bikeForm.brand}
                   onValueChange={(v) => {
@@ -2800,8 +2798,8 @@ export default function SuperAdmin() {
               </div>
               <div className="space-y-2">
                 <Label className={bikeFormErrors.name ? 'text-destructive' : ''}>
-                  Vehicle Name
-                </Label>
+                Vehicle Name <span className="text-destructive">*</span>
+              </Label>
                 <Select
                   value={bikeForm.name}
                   onValueChange={(v) => {
@@ -2846,7 +2844,7 @@ export default function SuperAdmin() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Year</Label>
+              <Label>Year <span className="text-destructive">*</span></Label>
               <Select
                 value={bikeForm.year}
                 onValueChange={(v) => setBikeForm({ ...bikeForm, year: v })}
@@ -2866,7 +2864,7 @@ export default function SuperAdmin() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className={bikeFormErrors.type ? 'text-destructive' : ''}>Type</Label>
+              <Label className={bikeFormErrors.type ? 'text-destructive' : ''}>Type <span className="text-destructive">*</span></Label>
               <Select
                 value={bikeForm.type}
                 onValueChange={(v) => {
@@ -2891,7 +2889,7 @@ export default function SuperAdmin() {
               )}
             </div>
             <div className="space-y-2">
-              <Label>Category</Label>
+              <Label>Category <span className="text-destructive">*</span></Label>
               <Select
                 value={bikeForm.category || 'midrange'}
                 onValueChange={(v) => setBikeForm({ ...bikeForm, category: v })}
@@ -2907,10 +2905,10 @@ export default function SuperAdmin() {
               </Select>
             </div>
             <div className="space-y-2 border-t pt-4 mt-4">
-              <Label className="text-sm font-medium">Tariff Configuration (Admin Only)</Label>
+              <Label className="text-sm font-medium">Tariff Configuration (Admin Only) <span className="text-destructive">*</span></Label>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Weekday Rate (₹/hr)</Label>
+                  <Label className="text-xs text-muted-foreground">Weekday Rate (₹/hr) <span className="text-destructive">*</span></Label>
                   <Input
                     type="text"
                     placeholder="Weekday Rate"
@@ -2924,7 +2922,7 @@ export default function SuperAdmin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Weekend Rate (₹/hr)</Label>
+                  <Label className="text-xs text-muted-foreground">Weekend Rate (₹/hr) <span className="text-destructive">*</span></Label>
                   <Input
                     type="text"
                     placeholder="Weekend Rate"
@@ -2938,7 +2936,7 @@ export default function SuperAdmin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Excess KM Charge (₹/km)</Label>
+                  <Label className="text-xs text-muted-foreground">Excess KM Charge (₹/km) <span className="text-destructive">*</span></Label>
                   <Input
                     type="text"
                     placeholder="Excess Charge"
@@ -2952,7 +2950,7 @@ export default function SuperAdmin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">KM Limit Per Hour</Label>
+                  <Label className="text-xs text-muted-foreground">KM Limit Per Hour <span className="text-destructive">*</span></Label>
                   <Input
                     type="text"
                     placeholder="KM Limit/Hr"
@@ -2966,7 +2964,7 @@ export default function SuperAdmin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">KM Limit</Label>
+                  <Label className="text-xs text-muted-foreground">KM Limit <span className="text-destructive">*</span></Label>
                   <Input
                     type="text"
                     placeholder="KM Limit"
@@ -2980,7 +2978,7 @@ export default function SuperAdmin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Min Booking Hours</Label>
+                  <Label className="text-xs text-muted-foreground">Min Booking Hours <span className="text-destructive">*</span></Label>
                   <Input
                     type="text"
                     placeholder="Min Hours"
@@ -2994,7 +2992,7 @@ export default function SuperAdmin() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">GST Percentage (%)</Label>
+                  <Label className="text-xs text-muted-foreground">GST Percentage (%) <span className="text-destructive">*</span></Label>
                   <Input
                     type="text"
                     placeholder="GST %"
@@ -3011,7 +3009,7 @@ export default function SuperAdmin() {
             </div>
             <div className="space-y-2">
               <Label className={bikeFormErrors.locationId ? 'text-destructive' : ''}>
-                Location
+                Location <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={bikeForm.locationId}
@@ -3042,7 +3040,7 @@ export default function SuperAdmin() {
               <Label
                 className={`text-sm font-medium ${bikeFormErrors.image ? 'text-destructive' : ''}`}
               >
-                Main Vehicle Image
+                Main Vehicle Image <span className="text-destructive">*</span>
               </Label>
               <div className="flex gap-4 items-start">
                 <BikeImagePreview 
@@ -3245,8 +3243,17 @@ export default function SuperAdmin() {
                     const errors: Record<string, string> = {};
                     if (!bikeForm.brand) errors.brand = 'Brand is required';
                     if (!bikeForm.name) errors.name = 'Vehicle name is required';
+                    if (!bikeForm.year) errors.year = 'Year is required';
                     if (!bikeForm.type) errors.type = 'Type is required';
+                    if (!bikeForm.category) errors.category = 'Category is required';
                     if (!bikeForm.locationId) errors.locationId = 'Location is required';
+                    if (!bikeForm.weekdayRate) errors.weekdayRate = 'Weekday rate is required';
+                    if (!bikeForm.weekendRate) errors.weekendRate = 'Weekend rate is required';
+                    if (!bikeForm.excessKmCharge) errors.excessKmCharge = 'Excess KM charge is required';
+                    if (!bikeForm.kmLimitPerHour) errors.kmLimitPerHour = 'KM limit per hour is required';
+                    if (!bikeForm.kmLimit) errors.kmLimit = 'KM limit is required';
+                    if (!bikeForm.minBookingHours) errors.minBookingHours = 'Min booking hours is required';
+                    if (bikeForm.gstPercentage === undefined || bikeForm.gstPercentage === '') errors.gstPercentage = 'GST percentage is required';
                     if (!bikeForm.image) errors.image = 'Vehicle image is required';
 
                     if (Object.keys(errors).length > 0) {

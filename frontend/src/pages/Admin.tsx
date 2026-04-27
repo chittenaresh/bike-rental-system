@@ -334,10 +334,10 @@ export default function Admin() {
     };
 
     const config = constraints[field];
-    const regex = /^\d*\.?\d*$/;
+    const regex = /^\d*\.?\d{0,2}$/;
 
     if (!regex.test(value)) {
-      setNumericErrors((prev) => ({ ...prev, [field]: 'Only numbers are allowed' }));
+      setNumericErrors((prev) => ({ ...prev, [field]: 'Only numbers with up to 2 decimal places are allowed' }));
       return;
     }
 
@@ -402,7 +402,7 @@ export default function Admin() {
       navigate('/auth');
       return;
     }
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
       toast({
         title: 'Access Denied',
         description: 'Admin access required',
@@ -412,8 +412,6 @@ export default function Admin() {
       return;
     }
     setCurrentUser(user);
-    console.log('[Admin] Current User:', user);
-    console.log('[Admin] Initial selectedLocationId:', selectedLocationId);
     loadData();
   }, []);
 
@@ -1668,10 +1666,10 @@ export default function Admin() {
                                   year: bike.year ? String(bike.year) : '',
                                   type: bike.type,
                                   category: bike.category || 'midrange',
-                                  pricePerHour: bike.pricePerHour ? String(Math.round(Number(bike.pricePerHour) * 100) / 100) : '',
-                                  price12Hours: bike.price12Hours ? String(Math.round(Number(bike.price12Hours) * 100) / 100) : '',
-                                  pricePerWeek: bike.pricePerWeek ? String(Math.round(Number(bike.pricePerWeek) * 100) / 100) : '',
-                                  kmLimit: bike.kmLimit ? String(Math.round(Number(bike.kmLimit) * 100) / 100) : '',
+                                  pricePerHour: bike.pricePerHour ? String(parseFloat(Number(bike.pricePerHour).toFixed(2))) : '',
+                                  price12Hours: bike.price12Hours ? String(parseFloat(Number(bike.price12Hours).toFixed(2))) : '',
+                                  pricePerWeek: bike.pricePerWeek ? String(parseFloat(Number(bike.pricePerWeek).toFixed(2))) : '',
+                                  kmLimit: bike.kmLimit ? String(parseFloat(Number(bike.kmLimit).toFixed(2))) : '',
                                   locationId:
                                     currentUser?.role === 'superadmin'
                                       ? bike.locationId
@@ -1681,14 +1679,14 @@ export default function Admin() {
                                     bike.images && bike.images.length > 0
                                       ? [...bike.images, '', '', ''].slice(0, 3)
                                       : ['', '', ''],
-                                  weekdayRate: bike.weekdayRate ? String(Math.round(Number(bike.weekdayRate) * 100) / 100) : '',
-                                  weekendRate: bike.weekendRate ? String(Math.round(Number(bike.weekendRate) * 100) / 100) : '',
-                                  excessKmCharge: bike.excessKmCharge ? String(Math.round(Number(bike.excessKmCharge) * 100) / 100) : '',
-                                  kmLimitPerHour: bike.kmLimitPerHour ? String(Math.round(Number(bike.kmLimitPerHour) * 100) / 100) : '',
-                                  minBookingHours: bike.minBookingHours ? String(Math.round(Number(bike.minBookingHours) * 100) / 100) : '',
+                                  weekdayRate: bike.weekdayRate ? String(parseFloat(Number(bike.weekdayRate).toFixed(2))) : '',
+                                  weekendRate: bike.weekendRate ? String(parseFloat(Number(bike.weekendRate).toFixed(2))) : '',
+                                  excessKmCharge: bike.excessKmCharge ? String(parseFloat(Number(bike.excessKmCharge).toFixed(2))) : '',
+                                  kmLimitPerHour: bike.kmLimitPerHour ? String(parseFloat(Number(bike.kmLimitPerHour).toFixed(2))) : '',
+                                  minBookingHours: bike.minBookingHours ? String(parseFloat(Number(bike.minBookingHours).toFixed(2))) : '',
                                   gstPercentage:
                                     bike.gstPercentage !== undefined && bike.gstPercentage !== null
-                                      ? String(Math.round(Number(bike.gstPercentage) * 100) / 100)
+                                      ? String(parseFloat(Number(bike.gstPercentage).toFixed(2)))
                                       : '18',
                                 });
                                 setBikeDialogOpen(true);
@@ -2349,7 +2347,7 @@ export default function Admin() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Brand</Label>
+                <Label>Brand <span className="text-destructive">*</span></Label>
                 <Select
                   value={bikeForm.brand}
                   onValueChange={(v) => {
@@ -2375,7 +2373,7 @@ export default function Admin() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Vehicle Name</Label>
+                <Label>Vehicle Name <span className="text-destructive">*</span></Label>
                 <Select
                   value={bikeForm.name}
                   onValueChange={(v) => {
@@ -2413,7 +2411,7 @@ export default function Admin() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Year</Label>
+              <Label>Year <span className="text-destructive">*</span></Label>
               <Select
                 value={bikeForm.year}
                 onValueChange={(v) => setBikeForm({ ...bikeForm, year: v })}
@@ -2432,41 +2430,47 @@ export default function Admin() {
                 </SelectContent>
               </Select>
             </div>
-            <Select
-              value={bikeForm.type}
-              onValueChange={(v) => setBikeForm({ ...bikeForm, type: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fuel">Fuel</SelectItem>
-                <SelectItem value="electric">Electric</SelectItem>
-                <SelectItem value="scooter">Scooter</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={bikeForm.category || 'midrange'}
-              onValueChange={(v) => {
-                setBikeForm({ ...bikeForm, category: v as 'budget' | 'midrange' | 'topend' });
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="budget">Budget</SelectItem>
-                <SelectItem value="midrange">Mid Range</SelectItem>
-                <SelectItem value="topend">Top End</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label>Type <span className="text-destructive">*</span></Label>
+              <Select
+                value={bikeForm.type}
+                onValueChange={(v) => setBikeForm({ ...bikeForm, type: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fuel">Fuel</SelectItem>
+                  <SelectItem value="electric">Electric</SelectItem>
+                  <SelectItem value="scooter">Scooter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Category <span className="text-destructive">*</span></Label>
+              <Select
+                value={bikeForm.category || 'midrange'}
+                onValueChange={(v) => {
+                  setBikeForm({ ...bikeForm, category: v as 'budget' | 'midrange' | 'topend' });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="budget">Budget</SelectItem>
+                  <SelectItem value="midrange">Mid Range</SelectItem>
+                  <SelectItem value="topend">Top End</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Tariff Configuration (Admin Only)</Label>
+              <Label className="text-sm font-medium">Tariff Configuration (Admin Only) <span className="text-destructive">*</span></Label>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Input
-                    placeholder="Weekday Rate (₹/hr)"
+                    placeholder="Weekday Rate (₹/hr) *"
                     type="text"
                     value={bikeForm.weekdayRate}
                     onChange={(e) => handleNumericChange('weekdayRate', e.target.value)}
@@ -2479,7 +2483,7 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1">
                   <Input
-                    placeholder="Weekend Rate (₹/hr)"
+                    placeholder="Weekend Rate (₹/hr) *"
                     type="text"
                     value={bikeForm.weekendRate}
                     onChange={(e) => handleNumericChange('weekendRate', e.target.value)}
@@ -2492,7 +2496,7 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1">
                   <Input
-                    placeholder="Excess KM Charge (₹/km)"
+                    placeholder="Excess KM Charge (₹/km) *"
                     type="text"
                     value={bikeForm.excessKmCharge}
                     onChange={(e) => handleNumericChange('excessKmCharge', e.target.value)}
@@ -2505,7 +2509,7 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1">
                   <Input
-                    placeholder="KM Limit Per Hour"
+                    placeholder="KM Limit Per Hour *"
                     type="text"
                     value={bikeForm.kmLimitPerHour}
                     onChange={(e) => handleNumericChange('kmLimitPerHour', e.target.value)}
@@ -2518,7 +2522,7 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1">
                   <Input
-                    placeholder="KM Limit"
+                    placeholder="KM Limit *"
                     type="text"
                     value={bikeForm.kmLimit}
                     onChange={(e) => handleNumericChange('kmLimit', e.target.value)}
@@ -2531,7 +2535,7 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1">
                   <Input
-                    placeholder="Min Booking Hours"
+                    placeholder="Min Booking Hours *"
                     type="text"
                     value={bikeForm.minBookingHours}
                     onChange={(e) => handleNumericChange('minBookingHours', e.target.value)}
@@ -2544,7 +2548,7 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1">
                   <Input
-                    placeholder="GST Percentage (%)"
+                    placeholder="GST Percentage (%) *"
                     type="text"
                     value={bikeForm.gstPercentage}
                     onChange={(e) => handleNumericChange('gstPercentage', e.target.value)}
@@ -2559,24 +2563,27 @@ export default function Admin() {
             </div>
 
             {currentUser?.role === 'superadmin' && (
-              <Select
-                value={bikeForm.locationId}
-                onValueChange={(v) => setBikeForm({ ...bikeForm, locationId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.id}>
-                      {formatLocationDisplay(loc)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label>Location <span className="text-destructive">*</span></Label>
+                <Select
+                  value={bikeForm.locationId}
+                  onValueChange={(v) => setBikeForm({ ...bikeForm, locationId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {formatLocationDisplay(loc)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             <div className="space-y-3 border-t pt-4">
-              <Label className="text-sm font-medium">Main Vehicle Image</Label>
+              <Label className="text-sm font-medium">Main Vehicle Image <span className="text-destructive">*</span></Label>
               <div className="flex gap-4 items-start">
                 <BikeImagePreview 
                   url={bikeForm.image} 
@@ -2760,13 +2767,31 @@ export default function Admin() {
                 onClick={async () => {
                   try {
                     // Form validation
-                    if (!bikeForm.image) {
-                      toast({
-                        title: 'Vehicle image is required',
-                        description: 'Please upload or provide an image URL for the vehicle.',
-                        variant: 'destructive',
-                      });
-                      return;
+                    const requiredFields: Record<string, string> = {
+                      brand: 'Brand',
+                      name: 'Vehicle Name',
+                      year: 'Year',
+                      type: 'Type',
+                      category: 'Category',
+                      weekdayRate: 'Weekday Rate',
+                      weekendRate: 'Weekend Rate',
+                      excessKmCharge: 'Excess KM Charge',
+                      kmLimitPerHour: 'KM Limit Per Hour',
+                      kmLimit: 'KM Limit',
+                      minBookingHours: 'Min Booking Hours',
+                      gstPercentage: 'GST Percentage',
+                      image: 'Main Vehicle Image',
+                    };
+
+                    for (const [key, label] of Object.entries(requiredFields)) {
+                      if (!bikeForm[key]) {
+                        toast({
+                          title: 'Required Field',
+                          description: `${label} is required.`,
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
                     }
 
                     if (isUploading) {

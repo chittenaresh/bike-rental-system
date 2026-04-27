@@ -34,6 +34,30 @@ const PageLoader = () => (
   </div>
 );
 
+// Role-based route protection component
+const ProtectedRoute = ({ 
+  children, 
+  allowedRoles = [] 
+}: { 
+  children: React.ReactNode, 
+  allowedRoles?: string[] 
+}) => {
+  const user = getCurrentUser();
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    // Redirect non-admin users to dashboard, and non-superadmin admins to admin
+    if (user.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user.role === 'superadmin') return <Navigate to="/superadmin" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -69,15 +93,28 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route
                 path="/dashboard"
-                element={(() => {
-                  const user = getCurrentUser();
-                  if (user?.role === 'superadmin') return <Navigate to="/superadmin" replace />;
-                  if (user?.role === 'admin') return <Navigate to="/admin" replace />;
-                  return <Dashboard />;
-                })()}
+                element={
+                  <ProtectedRoute allowedRoles={['user']}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
               />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/superadmin" element={<SuperAdmin />} />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                    <Admin />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/superadmin"
+                element={
+                  <ProtectedRoute allowedRoles={['superadmin']}>
+                    <SuperAdmin />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
