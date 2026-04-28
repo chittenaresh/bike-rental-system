@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bike-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bike-backend
+  template:
+    metadata:
+      labels:
+        app: bike-backend
+    spec:
+      containers:
+      - name: backend
+        image: chittenaresh/bike-backend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MONGO_URI
+          value: "mongodb+srv://bikerental:saranya@cluster0.602qj8l.mongodb.net/?appName=Cluster0"
+
